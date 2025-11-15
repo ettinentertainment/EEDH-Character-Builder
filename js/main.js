@@ -353,7 +353,12 @@ function displayClassSelection() {
 }
 
 
-function selectClass(classData) { character.class = classData; displaySubclassSelection(); }
+function selectClass(classData) { 
+    character.class = classData; 
+    // Store original domains in case user backs out of new step
+    character.originalDomains = [...classData.domains];
+    displayDomainSetSelection(); 
+}
 
 function displaySubclassSelection() {
     const creatorContainer = getCreatorContainer();
@@ -365,7 +370,11 @@ function displaySubclassSelection() {
     const backButton = document.createElement('button');
     backButton.className = 'back-btn';
     backButton.textContent = '← Back to Class';
-    backButton.addEventListener('click', () => { delete character.class; displayClassSelection(); });
+    backButton.addEventListener('click', () => { 
+        delete character.subclass; 
+        character.class.domains = [...character.originalDomains]; // Restore original domains
+        displayDomainSetSelection(); 
+    });
     navContainer.appendChild(backButton);
     subclassSelectionStep.appendChild(navContainer);
     const cardsContainer = document.createElement('div');
@@ -385,6 +394,68 @@ function displaySubclassSelection() {
 }
 
 function selectSubclass(subclassData) { character.subclass = subclassData; displayAncestrySelection(); }
+
+function displayDomainSetSelection() {
+    const creatorContainer = getCreatorContainer();
+    const domainSetSelectionStep = document.createElement('div');
+    domainSetSelectionStep.id = 'domain-set-selection';
+    
+    const allDomains = [...new Set(gameData.domainCards.map(card => card.domain))].sort();
+    const originalDomains = character.class.domains;
+
+    let domainCardsHTML = allDomains.map(domain => {
+        const isSelected = originalDomains.includes(domain);
+        return `
+            <div class="card ${isSelected ? 'selected' : ''}" data-domain-name="${domain}">
+                <h3>${domain}</h3>
+            </div>
+        `;
+    }).join('');
+
+    domainSetSelectionStep.innerHTML = `
+        <h2>Step 2: Choose Domain Set for ${character.class.name}</h2>
+        <div class="step-nav">
+            <button class="back-btn" id="domain-set-back-btn">← Back to Class</button>
+            <button class="action-button" id="domain-set-next-btn" style="margin-left: auto;">Confirm Domains →</button>
+        </div>
+        <p>Your class's default domains are <strong>${originalDomains.join(' & ')}</strong>. You can keep these, or select any two domains to test.</p>
+        <p>Selected: <span id="selected-domain-count">${originalDomains.length}</span> / 2</p>
+        <div class="cards-container" id="domain-set-cards">${domainCardsHTML}</div>
+    `;
+
+    creatorContainer.appendChild(domainSetSelectionStep);
+
+    document.getElementById('domain-set-back-btn').addEventListener('click', () => {
+        delete character.class;
+        delete character.originalDomains;
+        displayClassSelection();
+    });
+
+    document.getElementById('domain-set-next-btn').addEventListener('click', () => {
+        const selectedDomains = Array.from(document.querySelectorAll('#domain-set-cards .card.selected')).map(c => c.dataset.domainName);
+        if (selectedDomains.length === 2) {
+            character.class.domains = selectedDomains; // Overwrite the class domains
+            displaySubclassSelection();
+        } else {
+            alert('You must select exactly two domains.');
+        }
+    });
+
+    document.querySelectorAll('#domain-set-cards .card').forEach(card => {
+        card.addEventListener('click', () => {
+            const selectedCount = document.querySelectorAll('#domain-set-cards .card.selected').length;
+            if (card.classList.contains('selected')) {
+                card.classList.remove('selected');
+            } else if (selectedCount < 2) {
+                card.classList.add('selected');
+            }
+            
+            const newSelectedCount = document.querySelectorAll('#domain-set-cards .card.selected').length;
+            document.getElementById('selected-domain-count').textContent = newSelectedCount;
+            document.getElementById('domain-set-next-btn').disabled = newSelectedCount !== 2;
+        });
+    });
+}
 
 function displayAncestrySelection() {
     const creatorContainer = getCreatorContainer();
@@ -1343,7 +1414,7 @@ function displayCharacterSheet() {
 
     const page2 = document.createElement('div');
     page2.className = 'sheet-page';
-    const vaultButtonHTML = `<div style="text-align: right; margin-bottom: 15px;"><button class="action-button" style="margin: 0;" onclick="openVaultModal()">View Vault</button></div>`;
+    const vaultButtonHTML = `<div style="text-align: right; margin-top: 20px; margin-bottom: 15px;"><button class="action-button" style="margin: 0;" onclick="openVaultModal()">View Vault</button></div>`;
     const loadoutSection = document.createElement('div');
     loadoutSection.className = 'sheet-section';
     loadoutSection.innerHTML = `<h3>Domain Card Loadout (${character.loadout.filter(c => c).length}/5)</h3>`;
@@ -1376,9 +1447,12 @@ function displayCharacterSheet() {
     }
     loadoutSection.appendChild(loadoutGrid);
     
-    page2.innerHTML = vaultButtonHTML;
-    page2.appendChild(loadoutSection);
-    sheet.appendChild(page2);
+    // --- GOAL 1 PATCH: Move Page 2 content to Page 1 ---
+    page1.insertAdjacentHTML('beforeend', vaultButtonHTML); // Add vault button
+    page1.appendChild(loadoutSection); // Add loadout section
+    // sheet.appendChild(page2); // Do not append page 2
+    // --- END GOAL 1 PATCH ---
+    
     sheetContainer.appendChild(sheet);
     
     const buttonContainer = document.createElement('div');
@@ -2292,6 +2366,14 @@ function generateTestCharacter(targetLevel, isPreview = false, className = 'any'
     
     const allExperiences = Object.values(gameData.experiences.categories).flat();
     allExperiences.sort(() => 0.5 - Math.random());
+    
+    // --- GOAL 3 PATCH V2: Get primary trait from suggested_traits ---
+    let primaryTrait = 'Strength'; // Default
+    let maxTrait = -Infinity;
+    for(const [trait, value] of Object.entries(randomClass.suggested_traits)) {
+        if(value > maxTrait) { maxTrait = value; primaryTrait = trait; }
+    }
+    
     genChar.experiences = [
         { name: allExperiences.pop(), description: 'No description.', modifier: 2 },
         { name: allExperiences.pop(), description: 'No description.', modifier: 2 }
@@ -2486,25 +2568,30 @@ function generateTestCharacter(targetLevel, isPreview = false, className = 'any'
     if (preferredArmorPool.length === 0) { 
         preferredArmorPool = gameData.armor.filter(a => a.tier === charTier);
     }
-    genChar.equipment.armor = preferredArmorPool[Math.floor(Math.random() * preferredArmorPool.length)];
-
-    // Weapon Selection
-    let preferredWeaponPool = gameData.weapons.primary.filter(w => {
-        return w.tier === charTier && w.name.includes(getTierPrefix(charTier));
-    });
-    if (preferredWeaponPool.length === 0) {
-        preferredWeaponPool = gameData.weapons.primary.filter(w => w.tier === charTier);
+    // Ensure armor pool is not empty
+    if(preferredArmorPool.length > 0) {
+        genChar.equipment.armor = preferredArmorPool[Math.floor(Math.random() * preferredArmorPool.length)];
     }
-    genChar.equipment.primary = preferredWeaponPool[Math.floor(Math.random() * preferredWeaponPool.length)];
+
+    // --- GOAL 3 PATCH V2: Weapon Selection based on Primary Trait ---
+    let baseWeaponPool = gameData.weapons.primary.filter(w => w.tier === charTier);
+    let finalWeaponPool = baseWeaponPool.filter(w => w.trait === primaryTrait);
+
+    // Failsafe in case no weapon matches the primary trait
+    if (finalWeaponPool.length === 0) { finalWeaponPool = baseWeaponPool; }
+    if (finalWeaponPool.length > 0) {
+        genChar.equipment.primary = finalWeaponPool[Math.floor(Math.random() * finalWeaponPool.length)];
+    }
 
 
-    if (genChar.equipment.primary.burden !== 'Two-Handed') {
+    if (genChar.equipment.primary && genChar.equipment.primary.burden !== 'Two-Handed') {
         const availableSecondary = gameData.weapons.secondary.filter(w => w.tier <= charTier);
          if (availableSecondary.length > 0) {
             genChar.equipment.secondary = availableSecondary[Math.floor(Math.random() * availableSecondary.length)];
         }
     }
 
+    // --- END GOAL 3 PATCH V2 ---
     tempGeneratedCharacter = genChar; 
 
     if (isPreview) {
@@ -2515,13 +2602,16 @@ function generateTestCharacter(targetLevel, isPreview = false, className = 'any'
         const multiclassText = generatorPreviewInfo.multiclassChoice ? `<li><strong>Multiclass:</strong> ${generatorPreviewInfo.multiclassChoice}</li>` : '';
         const upgradeText = generatorPreviewInfo.subclassUpgrade ? `<li><strong>Subclass Upgrade:</strong> ${generatorPreviewInfo.subclassUpgrade}</li>` : '';
 
+        // Safety check for equipment in case pools were empty
+        const primaryWeaponName = genChar.equipment.primary ? genChar.equipment.primary.name : "Unarmed";
+        const armorName = genChar.equipment.armor ? genChar.equipment.armor.name : "Unarmored";
 
         let previewHTML = `
             <h4>Preview: Level ${genChar.level} ${genChar.ancestry.name} ${genChar.class.name} ${genChar.multiclass ? `/ ${genChar.multiclass}` : ''}</h4>
             <ul style="text-align: left; font-size: 0.9em; padding-left: 20px;">
                 <li><strong>HP/Stress Slots:</strong> ${hp}/${stress}</li>
                 ${spellcastTraitText} ${multiclassText} ${upgradeText}
-                <li><strong>Equipped:</strong> ${genChar.equipment.primary.name} & ${genChar.equipment.armor.name}</li>
+                <li><strong>Equipped:</strong> ${primaryWeaponName} & ${armorName}</li>
                 <li><strong>Sample Cards:</strong> ${genChar.domainCards.slice(0, 3).map(c => c.name).join(', ')}</li>
             </ul>
             <button id="finalize-preview-btn" class="action-button" style="margin: 10px 0 0;">Finalize This Character</button>
