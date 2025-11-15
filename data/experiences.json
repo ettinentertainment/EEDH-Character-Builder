@@ -1,0 +1,20 @@
+{
+  "instruction": "There’s no set list of Experiences to choose from, but an Experience can’t be too broadly applicable and it can’t grant your character specific mechanical benefits, such as magic spells or special abilities.",
+  "categories": {
+    "Backgrounds": [
+      "Assassin", "Blacksmith", "Bodyguard", "Bounty Hunter", "Chef to the Royal Family", "Circus Performer", "Con Artist", "Fallen Monarch", "Field Medic", "High Priestess", "Merchant", "Noble", "Pirate", "Politician", "Runaway", "Scholar", "Sellsword", "Soldier", "Storyteller", "Thief", "World Traveler"
+    ],
+    "Characteristics": [
+      "Affable", "Battle-Hardened", "Bookworm", "Charming", "Cowardly", "Friend to All", "Helpful", "Intimidating Presence", "Leader", "Lone Wolf", "Loyal", "Observant", "Prankster", "Silver Tongue", "Sticky Fingers", "Stubborn to a Fault", "Survivor", "Young and Naive"
+    ],
+    "Specialties": [
+      "Acrobat", "Gambler", "Healer", "Inventor", "Magical Historian", "Mapmaker", "Master of Disguise", "Navigator", "Sharpshooter", "Survivalist", "Swashbuckler", "Tactician"
+    ],
+    "Skills": [
+      "Animal Whisperer", "Barter", "Deadly Aim", "Fast Learner", "Incredible Strength", "Liar", "Light Feet", "Negotiator", "Photographic Memory", "Quick Hands", "Repair", "Scavenger", "Tracker"
+    ],
+    "Phrases": [
+      "Catch Me If You Can", "Fake It Till You Make It", "First Time’s the Charm", "Hold the Line", "I Won’t Let You Down", "I’ll Catch You", "I’ve Got Your Back", "Knowledge Is Power", "Nature’s Friend", "Never Again", "No One Left Behind", "Pick on Someone Your Own Size", "The Show Must Go On", "This Is Not a Negotiation", "Wolf in Sheep’s Clothing"
+    ]
+  }
+}

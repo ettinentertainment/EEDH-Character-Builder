@@ -1,0 +1,83 @@
+[
+  {
+    "name": "Highborne",
+    "description": "Accustomed to a life of elegance, opulence, and prestige within the upper echelons of society.",
+    "adjectives": ["Amiable", "Candid", "Conniving", "Enterprising", "Ostentatious", "Unflappable"],
+    "feature": {
+      "name": "Privilege",
+      "description": "You have advantage on rolls to consort with nobles, negotiate prices, or leverage your reputation to get what you want."
+    }
+  },
+  {
+    "name": "Loreborne",
+    "description": "From a society that favors strong academic or political prowess and highly values knowledge.",
+    "adjectives": ["Direct", "Eloquent", "Inquisitive", "Patient", "Rhapsodic", "Witty"],
+    "feature": {
+      "name": "Well-Read",
+      "description": "You have advantage on rolls that involve the history, culture, or politics of a prominent person or place."
+    }
+  },
+  {
+    "name": "Orderborne",
+    "description": "From a collective that focuses on discipline or faith, upholding a set of principles that reflect your experience.",
+    "adjectives": ["Ambitious", "Benevolent", "Pensive", "Prudent", "Sardonic", "Stoic"],
+    "feature": {
+      "name": "Dedicated",
+      "description": "Record three sayings or values your upbringing instilled in you. Once per rest, when you embody one of these principles, you can roll a d20 as your Hope Die."
+    }
+  },
+  {
+    "name": "Ridgeborne",
+    "description": "You've called the rocky peaks and sharp cliffs of the mountainside home, making you sturdy and strong-willed.",
+    "adjectives": ["Bold", "Hardy", "Indomitable", "Loyal", "Reserved", "Stubborn"],
+    "feature": {
+      "name": "Steady",
+      "description": "You have advantage on rolls to traverse dangerous cliffs and ledges, navigate harsh environments, and use your survival knowledge."
+    }
+  },
+  {
+    "name": "Seaborne",
+    "description": "You lived on or near a large body of water, learning to sail and swim in even the most tumultuous waters.",
+    "adjectives": ["Candid", "Cooperative", "Exuberant", "Fierce", "Resolute", "Weathered"],
+    "feature": {
+      "name": "Know the Tide",
+      "description": "When you roll with Fear, place a token on your community card (max equal to your level). You can spend these tokens to gain a +1 bonus to a roll for each token spent."
+    }
+  },
+  {
+    "name": "Slyborne",
+    "description": "From a group that operates outside the law, including all manner of criminals, grifters, and con artists.",
+    "adjectives": ["Calculating", "Clever", "Formidable", "Perceptive", "Shrewd", "Tenacious"],
+    "feature": {
+      "name": "Scoundrel",
+      "description": "You have advantage on rolls to negotiate with criminals, detect lies, or find a safe place to hide."
+    }
+  },
+  {
+    "name": "Underborne",
+    "description": "From a subterranean society, recognized for incredible boldness, skill, and feats of engineering.",
+    "adjectives": ["Composed", "Elusive", "Indomitable", "Innovative", "Resourceful", "Unpretentious"],
+    "feature": {
+      "name": "Low-Light Living",
+      "description": "When you're in an area with low light or heavy shadow, you have advantage on rolls to hide, investigate, or perceive details within that area."
+    }
+  },
+  {
+    "name": "Wanderborne",
+    "description": "You've lived as a nomad, forgoing a permanent home and valuing information, skills, and connections over possessions.",
+    "adjectives": ["Inscrutable", "Magnanimous", "Mirthful", "Reliable", "Savvy", "Unorthodox"],
+    "feature": {
+      "name": "Nomadic Pack",
+      "description": "Add a Nomadic Pack to your inventory. Once per session, you can spend a Hope to pull out a mundane item that's useful to your situation."
+    }
+  },
+  {
+    "name": "Wildborne",
+    "description": "You lived deep within the forest, dedicated to the conservation of your homeland and its fauna.",
+    "adjectives": ["Hardy", "Loyal", "Nurturing", "Reclusive", "Sagacious", "Vibrant"],
+    "feature": {
+      "name": "Lightfoot",
+      "description": "Your movement is naturally silent. You have advantage on rolls to move without being heard."
+    }
+  }
+]

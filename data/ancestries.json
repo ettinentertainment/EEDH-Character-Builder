@@ -1,0 +1,254 @@
+[
+  {
+    "name": "Clank",
+    "description": "Sentient mechanical beings built from various materials like metal, wood, and stone.",
+    "features": [
+      {
+        "name": "Purposeful Design",
+        "description": "Choose one of your Experiences that aligns with your purpose and gain a permanent +1 bonus to it."
+      },
+      {
+        "name": "Efficient",
+        "description": "When you take a short rest, you can choose a long rest move instead of a short rest move."
+      }
+    ]
+  },
+  {
+    "name": "Drakona",
+    "description": "Humanoid dragons with thick scales and a powerful elemental breath, but no wings.",
+    "features": [
+      {
+        "name": "Scales",
+        "description": "When you would take Severe damage, you can mark a Stress to mark 1 fewer Hit Point."
+      },
+      {
+        "name": "Elemental Breath",
+        "description": "Choose an element (e.g., fire, ice). You can use this as an Instinct weapon dealing d8 magic damage."
+      }
+    ]
+  },
+  {
+    "name": "Dwarf",
+    "description": "Short, sturdy humanoids with dense musculature and a natural resilience.",
+    "features": [
+      {
+        "name": "Thick Skin",
+        "description": "When you take Minor damage, you can mark 2 Stress instead of marking a Hit Point."
+      },
+      {
+        "name": "Increased Fortitude",
+        "description": "Spend 3 Hope to halve incoming physical damage."
+      }
+    ]
+  },
+  {
+    "name": "Elf",
+    "description": "Tall humanoids with pointed ears, attuned senses, and the ability to enter a celestial trance instead of sleeping.",
+    "features": [
+      {
+        "name": "Quick Reactions",
+        "description": "Mark a Stress to gain advantage on a reaction roll."
+      },
+      {
+        "name": "Celestial Trance",
+        "description": "During a rest, you can drop into a trance to choose an additional downtime move."
+      }
+    ]
+  },
+  {
+    "name": "Faerie",
+    "description": "Winged humanoids with insectile features who undergo a metamorphosis during their life.",
+    "features": [
+      {
+        "name": "Luckbender",
+        "description": "Once per session, after you or a willing ally makes an action roll, spend 3 Hope to reroll the Duality Dice."
+      },
+      {
+        "name": "Wings",
+        "description": "You can fly. While flying, you can mark a Stress after an adversary attacks you to gain a +2 bonus to Evasion against it."
+      }
+    ]
+  },
+  {
+    "name": "Faun",
+    "description": "Humanoid goats with curving horns, cloven hooves, and powerful legs for leaping.",
+    "features": [
+      {
+        "name": "Caprine Leap",
+        "description": "You can leap anywhere within Close range as though it were normal movement."
+      },
+      {
+        "name": "Kick",
+        "description": "On a successful Melee attack, mark a Stress to deal an extra 2d6 damage and knock yourself or the target to Very Close range."
+      }
+    ]
+  },
+  {
+    "name": "Firbolg",
+    "description": "Bovine humanoids, often tall and muscular, with broad noses and drooping ears.",
+    "features": [
+      {
+        "name": "Charge",
+        "description": "On a successful Agility Roll to move from Far range into Melee, mark a Stress to deal 1d12 physical damage to all targets in Melee."
+      },
+      {
+        "name": "Unshakable",
+        "description": "When you would mark a Stress, roll a d6. On a 6, don't mark it."
+      }
+    ]
+  },
+  {
+    "name": "Fungril",
+    "description": "Humanoid mushrooms of incredible variety who can communicate via a nonverbal mycelial network.",
+    "features": [
+      {
+        "name": "Fungril Network",
+        "description": "Make an Instinct Roll (12) to use your mycelial array to speak with other fungril across any distance."
+      },
+      {
+        "name": "Death Connection",
+        "description": "While touching a recent corpse, mark a Stress to extract one memory from it related to a specific emotion."
+      }
+    ]
+  },
+  {
+    "name": "Galapa",
+    "description": "Anthropomorphic turtles with large, domed shells into which they can retract for protection.",
+    "features": [
+      {
+        "name": "Shell",
+        "description": "Gain a bonus to your damage thresholds equal to your Proficiency."
+      },
+      {
+        "name": "Retract",
+        "description": "Mark a Stress to retract into your shell. You gain resistance to physical damage but have disadvantage and cannot move."
+      }
+    ]
+  },
+  {
+    "name": "Giant",
+    "description": "Towering humanoids with one to three eyes, broad shoulders, and elongated arms.",
+    "features": [
+      {
+        "name": "Endurance",
+        "description": "Gain an additional Hit Point slot."
+      },
+      {
+        "name": "Reach",
+        "description": "Treat any Melee range weapon, ability, or spell as though it has a Very Close range instead."
+      }
+    ]
+  },
+  {
+    "name": "Goblin",
+    "description": "Small humanoids with large eyes and massive ears, granting them keen senses in the dark.",
+    "features": [
+      {
+        "name": "Surefooted",
+        "description": "You ignore disadvantage on Agility Rolls."
+      },
+      {
+        "name": "Danger Sense",
+        "description": "Once per rest, mark a Stress to force an adversary to reroll an attack against you or a nearby ally."
+      }
+    ]
+  },
+  {
+    "name": "Halfling",
+    "description": "Small humanoids with large, hairy feet and a natural attunement to the world's magnetic fields.",
+    "features": [
+      {
+        "name": "Luckbringer",
+        "description": "At the start of each session, everyone in your party gains a Hope."
+      },
+      {
+        "name": "Internal Compass",
+        "description": "When you roll a 1 on your Hope Die, you can reroll it."
+      }
+    ]
+  },
+  {
+    "name": "Human",
+    "description": "Physically adaptable people with dexterous hands and bodies built for endurance.",
+    "features": [
+      {
+        "name": "High Stamina",
+        "description": "Gain an additional Stress slot."
+      },
+      {
+        "name": "Adaptability",
+        "description": "When you fail a roll that utilized one of your Experiences, you can mark a Stress to reroll."
+      }
+    ]
+  },
+  {
+    "name": "Infernis",
+    "description": "Descendants of demons, possessing horns, pointed ears, and a 'dread visage' they can manifest.",
+    "features": [
+      {
+        "name": "Fearless",
+        "description": "When you roll with Fear, you can mark 2 Stress to change it into a roll with Hope instead."
+      },
+      {
+        "name": "Dread Visage",
+        "description": "You have advantage on rolls to intimidate hostile creatures."
+      }
+    ]
+  },
+  {
+    "name": "Katari",
+    "description": "Feline humanoids with retractable claws, heightened senses, and incredible agility.",
+    "features": [
+      {
+        "name": "Feline Instincts",
+        "description": "When you make an Agility Roll, you can spend 2 Hope to reroll your Hope Die."
+      },
+      {
+        "name": "Retracting Claws",
+        "description": "Make an Agility Roll to scratch a target in Melee range. On a success, they become temporarily Vulnerable."
+      }
+    ]
+  },
+  {
+    "name": "Orc",
+    "description": "Humanoids with square features and boar-like tusks that protrude from their lower jaw.",
+    "features": [
+      {
+        "name": "Sturdy",
+        "description": "When you have 1 Hit Point remaining, attacks against you have disadvantage."
+      },
+      {
+        "name": "Tusks",
+        "description": "On a successful Melee attack, spend a Hope to gore the target with your tusks, dealing an extra 1d6 damage."
+      }
+    ]
+  },
+  {
+    "name": "Ribbet",
+    "description": "Anthropomorphic frogs with protruding eyes, webbed hands and feet, and a long, prehensile tongue.",
+    "features": [
+      {
+        "name": "Amphibious",
+        "description": "You can breathe and move naturally underwater."
+      },
+      {
+        "name": "Long Tongue",
+        "description": "Mark a Stress to use your tongue as a Finesse Close weapon that deals d12 physical damage."
+      }
+    ]
+  },
+  {
+    "name": "Simiah",
+    "description": "Anthropomorphic monkeys and apes with long limbs and prehensile feet, making them skilled climbers.",
+    "features": [
+      {
+        "name": "Natural Climber",
+        "description": "You have advantage on Agility Rolls that involve balancing and climbing."
+      },
+      {
+        "name": "Nimble",
+        "description": "Gain a permanent +1 bonus to your Evasion."
+      }
+    ]
+  }
+]
