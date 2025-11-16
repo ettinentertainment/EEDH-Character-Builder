@@ -1107,7 +1107,7 @@ function displayFinalReview() {
         const traitValue = character.traits[traitName.toLowerCase()];
         const traitItem = document.createElement('div');
         traitItem.className = 'trait-box';
-        traitItem.innerHTML = `<div class="name">${traitName.toUpperCase()}</div><div class="value">${traitValue >= 0 ? '+' : ''}${traitValue}</div>`;
+        traitItem.innerHTML = `<div class="name">${traitName.toUpperCase()}</div><div class="value">${(typeof traitValue === 'number') ? (traitValue >= 0 ? '+' : '') + traitValue : 'undefined'}</div>`;
         traitBanner.appendChild(traitItem);
     });
     finalReviewStep.appendChild(traitBanner);
@@ -1409,7 +1409,31 @@ function displayCharacterSheet() {
     sheetContainer.innerHTML = '';
     sheetContainer.classList.remove('hidden');
 
-    // --- REMOVED ALL INJECTED CSS ---
+    // --- PDF PAGE BREAK FIX ---
+    // Inject a print-only stylesheet to force a single-column layout for the PDF,
+    // while keeping the 2-column layout for the screen.
+    const printStyles = document.createElement('style');
+    printStyles.innerHTML = `
+        @media print {
+            .page-columns {
+                display: block !important; /* Override grid layout for print */
+            }
+            .page-columns > div { /* Target leftColumn and rightColumn */
+                width: 100% !important;
+                display: block !important;
+                float: none !important;
+            }
+            .sheet-page {
+                page-break-after: always; /* Ensure pages break nicely */
+            }
+            #character-sheet-container .step-nav {
+                display: none; /* Hide the Level Up/Equip buttons on print */
+            }
+        }
+    `;
+    sheetContainer.appendChild(printStyles);
+    // --- END PDF FIX ---
+
 
     const sheet = document.createElement('div');
     sheet.id = 'character-sheet';
@@ -1522,7 +1546,7 @@ function displayCharacterSheet() {
     // --- END V3 STATS ---
 
     
-    // --- V4: RE-IMPLEMENTING 2-COLUMN LAYOUT (Based on image_82faa9.png) ---
+    // --- V4: RE-IMPLEMENTING 2-COLUMN LAYOUT (Based on Screenshot 210522.png) ---
     
     // 1. Create Columns
     const page1Columns = document.createElement('div');
@@ -1577,37 +1601,31 @@ function displayCharacterSheet() {
     leftColumn.appendChild(featuresSection);
     page1Columns.appendChild(leftColumn); // Add Left Column to Page
 
-    // 3. Right Column (Secondary Stats + Experiences + Equipment)
+    // 3. Right Column (Equipment + Experiences)
     const rightColumn = document.createElement('div');
     rightColumn.style.display = 'flex';
     rightColumn.style.flexDirection = 'column';
     rightColumn.style.gap = '20px';
 
-    // Add Secondary Stats Bar
-    const secondaryStatsBar = document.createElement('div');
-    secondaryStatsBar.className = 'secondary-stats-bar';
-    let secondaryStatsHTML = '';
-    if (character.subclass.spellcast_trait) {
-        secondaryStatsHTML += `<div class="secondary-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
-    }
-    secondaryStatsHTML += `
-        <div class="secondary-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
-        <div class="secondary-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
-        <div class="secondary-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
-    `;
-    secondaryStatsBar.innerHTML = secondaryStatsHTML;
-    rightColumn.appendChild(secondaryStatsBar);
-
-    // Add Experiences
-    const expSection = document.createElement('div');
-    // REMOVED 'sheet-section' class
-    expSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
-    rightColumn.appendChild(expSection);
-
     // Add Equipment
     const equipSection = document.createElement('div');
     // REMOVED 'sheet-section' class
     let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>`;
+    
+    // Add Secondary Stats Bar *INSIDE* Equipment section
+    const secondaryStatsBar = document.createElement('div');
+    secondaryStatsBar.className = 'secondary-stats-bar';
+    let secondaryStatsHTML = '';
+    secondaryStatsHTML += `
+        <div class="secondary-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
+        <div class="secondary-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
+        <div class="secondary-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
+    `;
+    if (character.subclass.spellcast_trait) {
+        secondaryStatsHTML += `<div class="secondary-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
+    }
+    secondaryStatsBar.innerHTML = secondaryStatsHTML;
+    equipSection.appendChild(secondaryStatsBar); // Add stats bar here
     
     if (character.equipment.primary) {
         const createItemHTML = (item) => {
@@ -1618,9 +1636,18 @@ function displayCharacterSheet() {
             if(item.trait) html += `<li><strong>Trait:</strong> ${item.trait}</li>`;
             if(item.range) html += `<li><strong>Range:</strong> ${item.range}</li>`;
             if(item.damage) {
-                let primaryDamageDice = item.damage.split('d')[1];
-                let primaryDamage = `${character.proficiency}d${primaryDamageDice}`;
-                html += `<li><strong>Damage:</strong> ${primaryDamage}</li>`;
+                // --- DAMAGE CALCULATION FIX ---
+                let damageString = item.damage; // "d8+1 phy" or "d10 mag"
+                let parts = damageString.split(' '); // ["d8+1", "phy"] or ["d10", "mag"]
+                let diceInfo = parts[0]; // "d8+1" or "d10"
+                let damageType = parts.length > 1 ? parts[1] : ''; // "phy" or "mag" or ""
+                let diceParts = diceInfo.split('+'); // ["d8", "1"] or ["d10"]
+                let dieType = diceParts[0]; // "d8" or "d10"
+                let bonus = diceParts[1] ? `+${diceParts[1]}` : ''; // "+1" or ""
+                
+                let finalDamage = `${character.proficiency}${dieType}${bonus} ${damageType}`;
+                // --- END DAMAGE CALCULATION FIX ---
+                html += `<li><strong>Damage:</strong> ${finalDamage}</li>`;
             }
             if(item.burden) html += `<li><strong>Wield:</strong> ${item.burden}</li>`;
             if(item.feature) html += `<li><strong>Feature:</strong> ${item.feature}</li>`;
@@ -1628,23 +1655,32 @@ function displayCharacterSheet() {
             return html;
         };
 
-        equipHTML += '<div class="equipment-layout-grid">';
+        const equipmentGrid = document.createElement('div');
+        equipmentGrid.className = 'equipment-layout-grid';
+        let gridHTML = '';
         if (character.equipment.armor) {
-            equipHTML += `<div class="equipment-item-display"><h5>${character.equipment.armor.name} (Armor)</h5>${createItemHTML(character.equipment.armor)}</div>`;
+            gridHTML += `<div class="equipment-item-display"><h5>${character.equipment.armor.name} (Armor)</h5>${createItemHTML(character.equipment.armor)}</div>`;
         } else {
-            equipHTML += `<div class="equipment-item-display"><h5>Unarmored</h5><p>No armor equipped.</p></div>`;
+            gridHTML += `<div class="equipment-item-display"><h5>Unarmored</h5><p>No armor equipped.</p></div>`;
         }
-        equipHTML += `<div class="equipment-item-display"><h5>${character.equipment.primary.name} (Primary)</h5>${createItemHTML(character.equipment.primary)}</div>`;
+        gridHTML += `<div class="equipment-item-display"><h5>${character.equipment.primary.name} (Primary)</h5>${createItemHTML(character.equipment.primary)}</div>`;
         if (character.equipment.secondary) {
-            equipHTML += `<div class="equipment-item-display"><h5>${character.equipment.secondary.name} (Secondary)</h5>${createItemHTML(character.equipment.secondary)}</div>`;
+            gridHTML += `<div class="equipment-item-display"><h5>${character.equipment.secondary.name} (Secondary)</h5>${createItemHTML(character.equipment.secondary)}</div>`;
         }
-        equipHTML += '</div>';
+        equipmentGrid.innerHTML = gridHTML;
+        equipSection.appendChild(equipmentGrid);
 
     } else {
         equipHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
     }
     equipSection.innerHTML = equipHTML;
     rightColumn.appendChild(equipSection);
+
+    // Add Experiences
+    const expSection = document.createElement('div');
+    // REMOVED 'sheet-section' class
+    expSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
+    rightColumn.appendChild(expSection);
     
     page1Columns.appendChild(rightColumn); // Add Right Column to Page
     
