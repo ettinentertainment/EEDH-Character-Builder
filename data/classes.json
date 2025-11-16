@@ -259,7 +259,7 @@
         "mastery_feature": { "name": "Thrive in Chaos & Have No Fear", "description": "\n* Thrive in Chaos: When you succeed on an attack, you can mark a Stress after rolling damage to force the target to mark an additional Hit Point.\n* Have No Fear: The extra magic damage from your 'Face Your Fear' feature increases to 3d10." }
       }
     ]
-  }},
+  },
   {
     "name": "My Custom Class",
     "description": "A description of your awesome new class.",
