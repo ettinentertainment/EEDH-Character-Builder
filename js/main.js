@@ -1211,6 +1211,8 @@ function displayCharacterSheet() {
             gap: 20px;
             width: 100%;
             margin-bottom: 20px;
+            /* This property helps the PDF generator see this as 'breakable' */
+            page-break-inside: avoid; 
         }
         #sheet-top-left {
             flex: 1;
@@ -1226,6 +1228,14 @@ function displayCharacterSheet() {
         #sheet-top-left #trackers-condensed {
             grid-template-columns: 1fr; /* Stack trackers vertically */
             gap: 10px;
+        }
+        /* Make the headers consistent without the sheet-section box */
+        #sheet-top-center h3, #sheet-top-right h3 {
+            font-size: 1.5em;
+            color: #ccc;
+            border-bottom: 2px solid #555;
+            padding-bottom: 8px;
+            margin-bottom: 15px;
         }
         .scattered-stats-grid {
             display: grid;
@@ -1390,7 +1400,7 @@ function displayCharacterSheet() {
     const topCenter = document.createElement('div');
     topCenter.id = 'sheet-top-center';
     const equipSection = document.createElement('div');
-    equipSection.className = 'sheet-section';
+    // equipSection.className = 'sheet-section'; // <-- REMOVED this class per user request
     
     let scatteredStatsHTML = `<div class="scattered-stats-grid">
         <div class="scattered-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
@@ -1446,7 +1456,7 @@ function displayCharacterSheet() {
     const topRight = document.createElement('div');
     topRight.id = 'sheet-top-right';
     const expSection = document.createElement('div');
-    expSection.className = 'sheet-section';
+    // expSection.className = 'sheet-section'; // <-- REMOVED this class per user request
     expSection.innerHTML = `<h3>Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
     topRight.appendChild(expSection);
     topRow.appendChild(topRight);
