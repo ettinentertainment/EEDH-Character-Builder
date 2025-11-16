@@ -813,7 +813,10 @@ function displayDomainCardSelection() {
     backButton.className = 'back-btn';
     backButton.textContent = '← Back to Experiences';
     backButton.addEventListener('click', () => displayExperienceSelection(false, displayTraitSelection, selectExperiences));
-    const nextButton = document.createElement('button');
+    
+    // We now use the overwritten domains from character.class.domains
+    
+     const nextButton = document.createElement('button');
     nextButton.className = 'action-button';
     nextButton.textContent = 'Confirm Domain Cards →';
     nextButton.style.marginLeft = 'auto';
@@ -872,7 +875,8 @@ function displayFinalReview() {
     backButton.addEventListener('click', () => { 
         character.domainCards = []; 
         character.loadout = [null, null, null, null, null]; 
-        displayDomainCardSelection(); 
+        // Go back to domain card selection, which will use the (potentially custom) domains
+         displayDomainCardSelection(); 
     });
     const finalizeButton = document.createElement('button');
     finalizeButton.className = 'action-button';
@@ -1412,6 +1416,7 @@ function displayCharacterSheet() {
     page1.appendChild(page1Columns);
     sheet.appendChild(page1);
 
+    // --- REVERTED GOAL 1 PATCH: Restore Page 2 ---
     const page2 = document.createElement('div');
     page2.className = 'sheet-page';
     const vaultButtonHTML = `<div style="text-align: right; margin-top: 20px; margin-bottom: 15px;"><button class="action-button" style="margin: 0;" onclick="openVaultModal()">View Vault</button></div>`;
@@ -1447,11 +1452,10 @@ function displayCharacterSheet() {
     }
     loadoutSection.appendChild(loadoutGrid);
     
-    // --- GOAL 1 PATCH: Move Page 2 content to Page 1 ---
-    page1.insertAdjacentHTML('beforeend', vaultButtonHTML); // Add vault button
-    page1.appendChild(loadoutSection); // Add loadout section
-    // sheet.appendChild(page2); // Do not append page 2
-    // --- END GOAL 1 PATCH ---
+    page2.innerHTML = vaultButtonHTML;
+    page2.appendChild(loadoutSection);
+    sheet.appendChild(page2);
+    // --- END REVERTED GOAL 1 PATCH ---
     
     sheetContainer.appendChild(sheet);
     
@@ -2632,6 +2636,37 @@ function printCharacterSheet() {
         console.error("Could not find the #character-sheet element to print.");
         return;
     }
+
+    // --- NEW VAULT PAGE LOGIC ---
+    const vaultCards = character.domainCards.filter(card => !character.loadout.includes(card.name));
+    let vaultPrintPage = null; // To store the new element
+
+    if (vaultCards.length > 0) {
+        vaultPrintPage = document.createElement('div');
+        vaultPrintPage.className = 'sheet-page';
+        vaultPrintPage.id = 'vault-print-page'; // For easy removal
+        vaultPrintPage.style.paddingTop = "0.5in"; // Add padding to avoid header collision on new page
+
+        let vaultHTML = `<div class="sheet-section">
+                        <h3>Domain Card Vault</h3>
+                        <div class="domain-loadout-grid">`; // Use same class for styling
+
+        vaultCards.forEach(card => {
+            vaultHTML += `
+                <div class="domain-card-slot">
+                    <h4>${card.name}</h4>
+                    <p><em>${card.domain} ${card.type} (Level ${card.level})</em></p>
+                    <hr>
+                    ${processFeatureText(card.description)}
+                </div>
+            `;
+        });
+
+        vaultHTML += '</div></div>';
+        vaultPrintPage.innerHTML = vaultHTML;
+        sheet.appendChild(vaultPrintPage); // Add the vault page to the sheet
+    }
+    // --- END NEW VAULT PAGE LOGIC ---
     
     const options = {
         margin:       0.5,
@@ -2641,7 +2676,13 @@ function printCharacterSheet() {
         jsPDF:        { unit: 'in', format: 'letter', orientation: 'portrait' }
     };
 
-    html2pdf().from(sheet).set(options).save();
+    // Use .then() to ensure cleanup happens after save
+    html2pdf().from(sheet).set(options).save().then(() => {
+        if (vaultPrintPage) {
+            vaultPrintPage.remove(); // Clean up the added vault page
+        }
+        console.log("PDF generated and vault page removed.");
+    });
 }
 
 function getTierPrefix(tier) {
