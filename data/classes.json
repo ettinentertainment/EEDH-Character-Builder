@@ -259,5 +259,59 @@
         "mastery_feature": { "name": "Thrive in Chaos & Have No Fear", "description": "\n* Thrive in Chaos: When you succeed on an attack, you can mark a Stress after rolling damage to force the target to mark an additional Hit Point.\n* Have No Fear: The extra magic damage from your 'Face Your Fear' feature increases to 3d10." }
       }
     ]
+  }},
+  {
+    "name": "My Custom Class",
+    "description": "A description of your awesome new class.",
+    "domains": ["Blade", "Grace"],
+    "starting_evasion": 10,
+    "starting_hp": 6,
+    "class_items": "A custom item or a cool trinket",
+    "suggested_traits": { "Strength": 2, "Agility": 1, "Finesse": 0, "Instinct": 0, "Presence": 1, "Knowledge": -1 },
+    "hope_feature": { 
+      "name": "My Hope Feature", 
+      "description": "Spend 3 Hope to do something cool." 
+    },
+    "class_feature": { 
+      "name": "My Class Feature", 
+      "description": "This is what my class can do." 
+    },
+    "subclasses": [
+      {
+        "name": "Custom Subclass A",
+        "description": "The first path.",
+        "spellcast_trait": "Strength",
+        "foundation_feature": { 
+          "name": "Foundation A", 
+          "description": "A cool starting ability." 
+        },
+        "specialization_feature": { 
+          "name": "Specialization A", 
+          "description": "A level-up ability." 
+        },
+        "mastery_feature": { 
+          "name": "Mastery A", 
+          "description": "A high-level ability." 
+        }
+      },
+      {
+        "name": "Custom Subclass B",
+        "description": "The second path.",
+        "spellcast_trait": null,
+        "foundation_feature": { 
+          "name": "Foundation B", 
+          "description": "Another starting ability." 
+        },
+        "specialization_feature": { 
+          "name": "Specialization B", 
+          "description": "Another level-up ability." 
+        },
+        "mastery_feature": { 
+          "name": "Mastery B", 
+          "description": "Another high-level ability." 
+        }
+      }
+    ]
   }
+]
 ]
