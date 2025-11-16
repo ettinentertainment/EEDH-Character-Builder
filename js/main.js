@@ -150,6 +150,11 @@ function closeLoadCharacterModal() {
 
 function formatDescription(text) {
     if (!text) return '';
+    // Fix for features that use \n*
+    if (!text.includes('\n*') && text.includes('\n')) {
+        text = text.replace(/\n/g, '\n* ');
+    }
+    
     if (!text.includes('\n*')) return `<p>${text}</p>`;
     let html = '';
     const parts = text.split('\n*');
@@ -704,9 +709,8 @@ function displayTraitSelection() {
         traitContainer.innerHTML += `<p style="text-align: center; font-style: italic; font-size: 1.1em;">Your Spellcast Trait for ${character.subclass.name} is <strong>${character.subclass.spellcast_trait}</strong>.</p>`;
     }
 
-    // --- CUSTOM CLASS TRAIT SELECTION ---
+    // --- CUSTOM CLASS TRAIT SELECTION (REMOVED DROPDOWN) ---
     if (character.class.name === "Custom Class") {
-        let traitOptions = ['Strength', 'Agility', 'Finesse', 'Instinct', 'Presence', 'Knowledge'];
         let subclassTrait = character.subclass.spellcast_trait;
         
         // If no spellcast trait (e.g., Warrior), find the +2 trait from its parent class
@@ -724,11 +728,7 @@ function displayTraitSelection() {
 
         const customTraitHTML = `
             <div style="text-align: center; margin: 20px auto; padding: 15px; background: #222; border: 1px solid #444; border-radius: 8px; max-width: 500px;">
-                <label for="custom-primary-trait" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: block;">Select Your Primary Trait</label>
-                <select id="custom-primary-trait" style="font-size: 1.1em; padding: 8px;">
-                    ${traitOptions.map(t => `<option value="${t.toLowerCase()}" ${t.toLowerCase() === subclassTrait.toLowerCase() ? 'selected' : ''}>${t}</option>`).join('')}
-                </select>
-                <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">This will be set to +2 when you use "Suggest Traits". We've pre-selected the one from your chosen subclass.</p>
+                <p style="font-size: 1.1em; color: #ccc; margin-top: 10px;">For this Custom Class, the "Suggest Traits" button will use the suggested traits from the <strong>${character.subclass.parentClassName}</strong> class, which defaults to <strong>${subclassTrait}</strong> as the primary trait.</p>
             </div>
         `;
         traitContainer.innerHTML += customTraitHTML;
@@ -736,7 +736,7 @@ function displayTraitSelection() {
     // --- END CUSTOM CLASS TRAIT SELECTION ---
 
     const suggestedButton = document.createElement('button');
-    suggestedButton.textContent = (character.class.name === "Custom Class") ? "Suggest Traits" : `Use Suggested Traits for ${character.class.name}`;
+    suggestedButton.textContent = `Use Suggested Traits`;
     suggestedButton.className = 'action-button';
     suggestedButton.style.display = 'block';
     suggestedButton.style.margin = '20px auto';
@@ -746,33 +746,15 @@ function displayTraitSelection() {
             allSelects[s.dataset.trait] = s;
         });
 
-        if (character.class.name === "Custom Class") {
-            // Custom Class Logic
-            const primaryTrait = document.getElementById('custom-primary-trait').value.toLowerCase();
-            let remainingModifiers = ['+1', '+1', '+0', '+0', '-1'];
-            
-            // Shuffle modifiers
-            for (let i = remainingModifiers.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [remainingModifiers[i], remainingModifiers[j]] = [remainingModifiers[j], remainingModifiers[i]];
-            }
-
-            for (const traitName in allSelects) {
-                if (traitName === primaryTrait) {
-                    allSelects[traitName].value = '+2';
-                } else {
-                    allSelects[traitName].value = remainingModifiers.pop();
-                }
-            }
-        } else {
-            // Original Logic
-            const suggested = character.class.suggested_traits;
-            for (const traitName in suggested) {
-                const select = allSelects[traitName.toLowerCase()];
-                if (select) {
-                    const value = suggested[traitName] >= 0 ? `+${suggested[traitName]}` : `${suggested[traitName]}`;
-                    select.value = value;
-                }
+        // --- SIMPLIFIED LOGIC ---
+        // This now works for BOTH regular and custom classes, because
+        // in selectCustomSubclass(), we copied the parent's traits.
+        const suggested = character.class.suggested_traits;
+        for (const traitName in suggested) {
+            const select = allSelects[traitName.toLowerCase()];
+            if (select) {
+                const value = suggested[traitName] >= 0 ? `+${suggested[traitName]}` : `${suggested[traitName]}`;
+                select.value = value;
             }
         }
         updateTraitDropdowns();
@@ -1362,6 +1344,12 @@ function updateEquipmentUI() {
 function processFeatureText(text) {
     if(!text) return '';
     let html = '';
+    
+    // Fix for features that use \n*
+    if (!text.includes('\n*') && text.includes('\n')) {
+        text = text.replace(/\n/g, '\n* ');
+    }
+
     const parts = text.split('\n*');
     const mainDesc = parts[0];
     let hasTokens = mainDesc.toLowerCase().includes('token');
@@ -1385,7 +1373,7 @@ function processFeatureText(text) {
         });
         listHtml += '</ul>';
         html += listHtml;
-    } else if (hasTokens) {
+    } else if (hasTokens && !mainDesc.toLowerCase().includes('community card')) { // Don't add a counter for "Know the Tide"
         let counterId = `token-counter-${Math.random().toString(36).substr(2, 9)}`;
         html += `<div class="token-counter" id="${counterId}"><button onclick="updateTokenCount('${counterId}', -1)">-</button><span data-count>0</span><button onclick="updateTokenCount('${counterId}', 1)">+</button></div>`;
     }
@@ -1413,6 +1401,7 @@ function displayCharacterSheet() {
     // Inject a print-only stylesheet to force a single-column layout for the PDF,
     // while keeping the 2-column layout for the screen.
     const printStyles = document.createElement('style');
+    printStyles.id = 'print-fix-styles';
     printStyles.innerHTML = `
         @media print {
             .page-columns {
@@ -1422,12 +1411,18 @@ function displayCharacterSheet() {
                 width: 100% !important;
                 display: block !important;
                 float: none !important;
+                /* Ensure they don't try to be flex columns */
+                flex-basis: auto !important;
             }
             .sheet-page {
                 page-break-after: always; /* Ensure pages break nicely */
             }
             #character-sheet-container .step-nav {
                 display: none; /* Hide the Level Up/Equip buttons on print */
+            }
+            /* Force h3s to not be inside a page break */
+            h3 {
+                page-break-after: avoid;
             }
         }
     `;
@@ -1507,13 +1502,13 @@ function displayCharacterSheet() {
         const traitValue = displayTraits[traitKey];
         const traitItem = document.createElement('div');
         traitItem.className = 'trait-box';
-        traitItem.innerHTML = `<div class="name">${traitName.toUpperCase()}</div><div class="value">${(typeof traitValue === 'number') ? (traitValue >= 0 ? '+' : '') + traitValue : 'undefined'}</div>`;
+        traitItem.innerHTML = `<div class="name">${traitName.toUpperCase()}</div><div class="value">${(typeof traitValue === 'number') ? (traitValue >= 0 ? '+' : '') + traitValue : '??'}</div>`;
         traitBanner.appendChild(traitItem);
     });
     coreStatsContainer.appendChild(traitBanner);
     page1.appendChild(coreStatsContainer); // Add Trait Banner
     
-    // --- V3: CALCULATE STATS ---
+    // --- CALCULATE ALL STATS ---
     const chosenProficiencyBonus = character.advancementsTaken['increase_proficiency'] || 0;
     character.proficiency = getBaseProficiency(character.level) + chosenProficiencyBonus;
     character.evasion = character.class.starting_evasion + (character.advancementsTaken['increase_evasion'] || 0) + evasionModifier;
@@ -1524,7 +1519,7 @@ function displayCharacterSheet() {
     if (!character.equipment.armor) {
         if (hasBareBones) {
             const tier = getCharacterTier(character.level); 
-            armorScore = 3 + (character.traits.strength || 0);
+            armorScore = 3 + (displayTraits.strength || 0);
             switch(tier) {
                 case 1: baseThresholds = [9, 19]; break;
                 case 2: baseThresholds = [11, 24]; break;
@@ -1537,16 +1532,16 @@ function displayCharacterSheet() {
             armorScore = 0;
         }
     } else {
-        armorScore = (character.equipment.armor.score || 0) + (character.equipment.secondary && character.equipment.secondary.feature.includes("Armor Score") ? parseInt(character.equipment.secondary.feature.match(/\+(\d+)/)[1], 10) : 0);
+        armorScore = (character.equipment.armor.score || 0) + (character.equipment.secondary && character.equipment.secondary.feature && character.equipment.secondary.feature.includes("Armor Score") ? parseInt(character.equipment.secondary.feature.match(/\+(\d+)/)[1], 10) : 0);
         baseThresholds = character.equipment.armor.thresholds.split('/').map(t => parseInt(t, 10));
     }
     const thresholdBonus = character.thresholdBonus || 0;
     character.majorThreshold = baseThresholds[0] + thresholdBonus;
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
-    // --- END V3 STATS ---
+    // --- END STATS ---
 
     
-    // --- V4: RE-IMPLEMENTING 2-COLUMN LAYOUT (Based on Screenshot 210522.png) ---
+    // --- V4: 2-COLUMN LAYOUT (like Screenshot 210522.png) ---
     
     // 1. Create Columns
     const page1Columns = document.createElement('div');
@@ -1589,14 +1584,14 @@ function displayCharacterSheet() {
     if (character.mastery_feature) {
         subclassFeaturesHTML += `<hr><h4>${character.mastery_feature.name} (Mastery)</h4>${processFeatureText(character.mastery_feature.description)}`;
     }
-    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('');
+    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('<hr>');
     
     featuresSection.innerHTML = `<h3>Features & Abilities</h3>
         <div class="feature-list-item">${hopeFeatureHTML}</div>
         <div class="feature-list-item">${classFeaturesHTML}</div>
         <div class="feature-list-item">${subclassFeaturesHTML}</div>
         <div class="feature-list-item">${ancestryFeaturesHTML}</div>
-        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
+        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4>${processFeatureText(character.community.feature.description)}</div>`;
     
     leftColumn.appendChild(featuresSection);
     page1Columns.appendChild(leftColumn); // Add Left Column to Page
@@ -1610,7 +1605,7 @@ function displayCharacterSheet() {
     // Add Equipment
     const equipSection = document.createElement('div');
     // REMOVED 'sheet-section' class
-    let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>`;
+    equipSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>`;
     
     // Add Secondary Stats Bar *INSIDE* Equipment section
     const secondaryStatsBar = document.createElement('div');
@@ -1645,6 +1640,7 @@ function displayCharacterSheet() {
                 let dieType = diceParts[0]; // "d8" or "d10"
                 let bonus = diceParts[1] ? `+${diceParts[1]}` : ''; // "+1" or ""
                 
+                // THE FIX:
                 let finalDamage = `${character.proficiency}${dieType}${bonus} ${damageType}`;
                 // --- END DAMAGE CALCULATION FIX ---
                 html += `<li><strong>Damage:</strong> ${finalDamage}</li>`;
@@ -1671,9 +1667,8 @@ function displayCharacterSheet() {
         equipSection.appendChild(equipmentGrid);
 
     } else {
-        equipHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
+        equipSection.innerHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
     }
-    equipSection.innerHTML = equipHTML;
     rightColumn.appendChild(equipSection);
 
     // Add Experiences
