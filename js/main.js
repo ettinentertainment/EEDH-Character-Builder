@@ -1200,77 +1200,16 @@ function displayCharacterSheet() {
     sheetContainer.innerHTML = '';
     sheetContainer.classList.remove('hidden');
 
-    // --- NEW LAYOUT PATCH ---
-    // Inject CSS to create the new layout from your image
-    const injectedCSS = document.createElement('style');
-    injectedCSS.innerHTML = `
-        .sheet-top-row {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            gap: 20px;
-            width: 100%;
-            margin-bottom: 20px;
-            /* This property helps the PDF generator see this as 'breakable' */
-            page-break-inside: avoid; 
-        }
-        #sheet-top-left {
-            flex: 1;
-            min-width: 200px; /* Tracker width */
-        }
-        #sheet-top-center {
-            flex: 2; /* Equipment section is widest */
-        }
-        #sheet-top-right {
-            flex: 1;
-            min-width: 200px; /* Experiences width */
-        }
-        #sheet-top-left #trackers-condensed {
-            grid-template-columns: 1fr; /* Stack trackers vertically */
-            gap: 10px;
-        }
-        /* Make the headers consistent without the sheet-section box */
-        #sheet-top-center h3, #sheet-top-right h3 {
-            font-size: 1.5em;
-            color: #ccc;
-            border-bottom: 2px solid #555;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-        .scattered-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            background-color: #2a2a2e;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .scattered-stat-box {
-            font-size: 0.9em;
-        }
-        .scattered-stat-box .name {
-            font-weight: bold;
-            color: #9d78c9;
-            text-transform: uppercase;
-            font-size: 0.8em;
-            letter-spacing: 0.5px;
-        }
-        .scattered-stat-box .value {
-            font-size: 1.4em;
-            font-weight: bold;
-            color: #fff;
-        }
-    `;
-    // --- END NEW LAYOUT PATCH ---
+    // --- NEW LAYOUT PATCH V3 ---
+    // Remove all custom injected CSS
+    // --- END NEW LAYOUT PATCH V3 ---
 
     const sheet = document.createElement('div');
     sheet.id = 'character-sheet';
 
     const page1 = document.createElement('div');
     page1.className = 'sheet-page';
-    page1.appendChild(injectedCSS); // Add our new layout rules
+    // --- V3: No injectedCSS ---
 
     const header = document.createElement('div');
     header.className = 'sheet-header';
@@ -1342,11 +1281,16 @@ function displayCharacterSheet() {
         traitBanner.appendChild(traitItem);
     });
     coreStatsContainer.appendChild(traitBanner);
-    page1.appendChild(coreStatsContainer); // Add Trait Banner
     
-    // --- REMOVED secondaryStatsBar ---
+    // --- V3: RESTORED secondaryStatsBar ---
+    const secondaryStatsBar = document.createElement('div');
+    secondaryStatsBar.className = 'secondary-stats-bar';
+    let secondaryStatsHTML = '';
 
-    // --- CALCULATE ALL STATS ---
+    if (character.subclass.spellcast_trait) {
+        secondaryStatsHTML += `<div class="secondary-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
+    }
+
     const chosenProficiencyBonus = character.advancementsTaken['increase_proficiency'] || 0;
     character.proficiency = getBaseProficiency(character.level) + chosenProficiencyBonus;
     character.evasion = character.class.starting_evasion + (character.advancementsTaken['increase_evasion'] || 0) + evasionModifier;
@@ -1377,14 +1321,27 @@ function displayCharacterSheet() {
     character.majorThreshold = baseThresholds[0] + thresholdBonus;
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
 
+    secondaryStatsHTML += `
+        <div class="secondary-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
+        <div class="secondary-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
+        <div class="secondary-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
+    `;
+    secondaryStatsBar.innerHTML = secondaryStatsHTML;
+    coreStatsContainer.appendChild(secondaryStatsBar);
+    // --- END V3 RESTORE ---
+    
+    page1.appendChild(coreStatsContainer); // Add Trait Banner + Secondary Stats
 
-    // --- NEW LAYOUT: TOP ROW ---
-    const topRow = document.createElement('div');
-    topRow.className = 'sheet-top-row';
+    // --- V3: Create original page-columns layout ---
+    const page1Columns = document.createElement('div');
+    page1Columns.className = 'page-columns';
 
-    // --- Top Left: Trackers ---
-    const topLeft = document.createElement('div');
-    topLeft.id = 'sheet-top-left';
+    // --- V3: Left Column (Trackers + Features) ---
+    const leftColumn = document.createElement('div');
+    leftColumn.style.display = 'flex';
+    leftColumn.style.flexDirection = 'column';
+    leftColumn.style.gap = '20px';
+
     const trackers = document.createElement('div');
     trackers.id = 'trackers-condensed';
     const hpSlots = character.class.starting_hp + (character.advancementsTaken['add_hp'] || 0);
@@ -1393,26 +1350,57 @@ function displayCharacterSheet() {
     trackers.appendChild(createTracker('Hope', 6, 'hope'));
     trackers.appendChild(createTracker('Stress', stressSlots, 'stress'));
     trackers.appendChild(createTracker('Armor', armorScore, 'armor', armorScore));
-    topLeft.appendChild(trackers);
-    topRow.appendChild(topLeft);
+    leftColumn.appendChild(trackers);
 
-    // --- Top Center: Equipment (with scattered stats) ---
-    const topCenter = document.createElement('div');
-    topCenter.id = 'sheet-top-center';
+    const featuresSection = document.createElement('div');
+    featuresSection.className = 'sheet-section'; // Keep this box as requested
+    
+    // ADDED HOPE FEATURE
+    let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
+    let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
+    if (character.class_feature_multiclass) {
+        classFeaturesHTML += `<hr><h4>${character.class_feature_multiclass.name} (${character.multiclass})</h4>${processFeatureText(character.class_feature_multiclass.description)}`;
+    }
+    let subclassFeaturesHTML = `<h4>${character.subclass.foundation_feature.name} (Subclass)</h4>${processFeatureText(character.subclass.foundation_feature.description)}`;
+    if (character.multiclassFoundationFeature) {
+        subclassFeaturesHTML += `<hr><h4>${character.multiclassFoundationFeature.name} (${character.multiclass} Subclass)</h4>${processFeatureText(character.multiclassFoundationFeature.description)}`;
+    }
+    if (character.specialization_feature) {
+        subclassFeaturesHTML += `<hr><h4>${character.specialization_feature.name} (Specialization)</h4>${processFeatureText(character.specialization_feature.description)}`;
+    }
+    if(character.multiclassSpecializationFeature) {
+        subclassFeaturesHTML += `<hr><h4>${character.multiclassSpecializationFeature.name} (${character.multiclass} Specialization)</h4>${processFeatureText(character.multiclassSpecializationFeature.description)}`;
+    }
+    if (character.mastery_feature) {
+        subclassFeaturesHTML += `<hr><h4>${character.mastery_feature.name} (Mastery)</h4>${processFeatureText(character.mastery_feature.description)}`;
+    }
+    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('');
+    
+    featuresSection.innerHTML = `<h3>Features & Abilities</h3>
+        <div class="feature-list-item">${hopeFeatureHTML}</div>
+        <div class="feature-list-item">${classFeaturesHTML}</div>
+        <div class="feature-list-item">${subclassFeaturesHTML}</div>
+        <div class="feature-list-item">${ancestryFeaturesHTML}</div>
+        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
+    
+    leftColumn.appendChild(featuresSection);
+    page1Columns.appendChild(leftColumn);
+
+    // --- V3: Right Column (Experiences + Equipment) ---
+    const rightColumn = document.createElement('div');
+    rightColumn.style.display = 'flex';
+    rightColumn.style.flexDirection = 'column';
+    rightColumn.style.gap = '20px';
+
+    const expSection = document.createElement('div');
+    // expSection.className = 'sheet-section'; // <-- REMOVED this class per user request
+    expSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
+    rightColumn.appendChild(expSection);
+
     const equipSection = document.createElement('div');
     // equipSection.className = 'sheet-section'; // <-- REMOVED this class per user request
     
-    let scatteredStatsHTML = `<div class="scattered-stats-grid">
-        <div class="scattered-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
-        <div class="scattered-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
-        <div class="scattered-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
-    `;
-    if (character.subclass.spellcast_trait) {
-        scatteredStatsHTML += `<div class="scattered-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
-    }
-    scatteredStatsHTML += `</div>`;
-
-    let equipHTML = `<h3>Equipment</h3>${scatteredStatsHTML}`;
+    let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>`;
     
     if (character.equipment.primary) {
         const createItemHTML = (item) => {
@@ -1449,56 +1437,12 @@ function displayCharacterSheet() {
         equipHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
     }
     equipSection.innerHTML = equipHTML;
-    topCenter.appendChild(equipSection);
-    topRow.appendChild(topCenter);
-
-    // --- Top Right: Experiences ---
-    const topRight = document.createElement('div');
-    topRight.id = 'sheet-top-right';
-    const expSection = document.createElement('div');
-    // expSection.className = 'sheet-section'; // <-- REMOVED this class per user request
-    expSection.innerHTML = `<h3>Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
-    topRight.appendChild(expSection);
-    topRow.appendChild(topRight);
+    rightColumn.appendChild(equipSection);
     
-    // Add the completed top row to Page 1
-    page1.appendChild(topRow);
-
-    // --- NEW LAYOUT: BOTTOM ROW (Full Width) ---
-    // --- Features & Abilities ---
-    const featuresSection = document.createElement('div');
-    featuresSection.className = 'sheet-section';
+    page1Columns.appendChild(rightColumn);
     
-    // ADDED HOPE FEATURE
-    let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
-    let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
-    if (character.class_feature_multiclass) {
-        classFeaturesHTML += `<hr><h4>${character.class_feature_multiclass.name} (${character.multiclass})</h4>${processFeatureText(character.class_feature_multiclass.description)}`;
-    }
-    let subclassFeaturesHTML = `<h4>${character.subclass.foundation_feature.name} (Subclass)</h4>${processFeatureText(character.subclass.foundation_feature.description)}`;
-    if (character.multiclassFoundationFeature) {
-        subclassFeaturesHTML += `<hr><h4>${character.multiclassFoundationFeature.name} (${character.multiclass} Subclass)</h4>${processFeatureText(character.multiclassFoundationFeature.description)}`;
-    }
-    if (character.specialization_feature) {
-        subclassFeaturesHTML += `<hr><h4>${character.specialization_feature.name} (Specialization)</h4>${processFeatureText(character.specialization_feature.description)}`;
-    }
-    if(character.multiclassSpecializationFeature) {
-        subclassFeaturesHTML += `<hr><h4>${character.multiclassSpecializationFeature.name} (${character.multiclass} Specialization)</h4>${processFeatureText(character.multiclassSpecializationFeature.description)}`;
-    }
-    if (character.mastery_feature) {
-        subclassFeaturesHTML += `<hr><h4>${character.mastery_feature.name} (Mastery)</h4>${processFeatureText(character.mastery_feature.description)}`;
-    }
-    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('');
-    
-    featuresSection.innerHTML = `<h3>Features & Abilities</h3>
-        <div class="feature-list-item">${hopeFeatureHTML}</div>
-        <div class="feature-list-item">${classFeaturesHTML}</div>
-        <div class="feature-list-item">${subclassFeaturesHTML}</div>
-        <div class="feature-list-item">${ancestryFeaturesHTML}</div>
-        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
-    
-    page1.appendChild(featuresSection); // Appended directly to page1, so it's full-width
-    
+    // Add the completed columns to Page 1
+    page1.appendChild(page1Columns);
     sheet.appendChild(page1);
 
     // --- Page 2: Loadout (Restored to original logic) ---
