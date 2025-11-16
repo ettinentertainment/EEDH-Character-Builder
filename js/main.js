@@ -30,7 +30,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('data/domain_cards.json').then(response => response.json()),
         fetch('data/weapons.json').then(response => response.json()),
         fetch('data/armor.json').then(response => response.json()),
-        fetch('data/advancements.json').then(response => response.json()),
+        fetch('data.advancements.json').then(response => response.json()),
         fetch('data/experiences.json').then(response => response.json())
     ])
     .then(([classes, ancestries, communities, domainCards, weapons, armor, advancements, experiences]) => {
@@ -1409,8 +1409,6 @@ function displayCharacterSheet() {
     sheetContainer.innerHTML = '';
     sheetContainer.classList.remove('hidden');
 
-    // --- REMOVED ALL INJECTED CSS ---
-
     const sheet = document.createElement('div');
     sheet.id = 'character-sheet';
 
@@ -1489,7 +1487,7 @@ function displayCharacterSheet() {
     coreStatsContainer.appendChild(traitBanner);
     page1.appendChild(coreStatsContainer); // Add Trait Banner
     
-    // --- V3: CALCULATE STATS ---
+    // --- CALCULATE ALL STATS ---
     const chosenProficiencyBonus = character.advancementsTaken['increase_proficiency'] || 0;
     character.proficiency = getBaseProficiency(character.level) + chosenProficiencyBonus;
     character.evasion = character.class.starting_evasion + (character.advancementsTaken['increase_evasion'] || 0) + evasionModifier;
@@ -1519,10 +1517,10 @@ function displayCharacterSheet() {
     const thresholdBonus = character.thresholdBonus || 0;
     character.majorThreshold = baseThresholds[0] + thresholdBonus;
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
-    // --- END V3 STATS ---
+    // --- END STATS ---
 
     
-    // --- V4: RE-IMPLEMENTING 2-COLUMN LAYOUT (Based on image_82faa9.png) ---
+    // --- V4: 2-COLUMN LAYOUT (like image_82faa9.png) ---
     
     // 1. Create Columns
     const page1Columns = document.createElement('div');
@@ -1618,10 +1616,88 @@ function displayCharacterSheet() {
             if(item.trait) html += `<li><strong>Trait:</strong> ${item.trait}</li>`;
             if(item.range) html += `<li><strong>Range:</strong> ${item.range}</li>`;
             if(item.damage) {
-                let primaryDamageDice = item.damage.split('d')[1];
-                let primaryDamage = `${character.proficiency}d${primaryDamageDice}`;
-                html += `<li><strong>Damage:</strong> ${primaryDamage}</li>`;
+                // --- DAMAGE CALCULATION FIX ---
+                // The SRD (page 43) says "Your damage roll is your Proficiency die + any additional dice from your weapon".
+                // The weapon files (e.g., weapons.json) show "d8+1 phy".
+                // The PDF character sheets (e.g., Layout_Test_level_1.2.pdf) show "Damage: 1d10+2 phy" for a Halberd, which matches the JSON.
+                // This implies the `+X` is a static bonus, and `XdY` is the dice.
+                // The Warrior's "Combat Training" (classes.json) says "gain a bonus to your damage roll equal to your level."
+                // The PDF for the Seraph (Layout_Test_level_1.1.pdf) shows "Damage: 1d8+1 mag" for a Hallowed Axe, which matches the JSON.
+                // The PDF for the Orc Seraph (Layout_Test_level_1.2.pdf) shows "Damage: 1d10+2 phy" for Halberd, which matches the JSON.
+                // It seems the `main.js` *was* calculating damage incorrectly by replacing the number of dice with proficiency.
+                // The rule says "Your damage roll is your Proficiency die + any additional dice from your weapon".
+                // Let's look at the SRD. Page 43: "When you make an attack, your damage roll is your Proficiency die + any additional dice from your weapon."
+                // Okay, this is confusing. Let's look at the PDF examples.
+                // Elf Seraph (Prof 1): Hallowed Axe (d8+1 mag). Sheet says "1d8+1 mag".
+                // Orc Seraph (Prof 1): Halberd (d10+2 phy). Sheet says "1d10+2 phy".
+                // Drakona Druid (Prof 1): Hand Runes (d10 mag). Sheet says "1d10 mag".
+                // This means my *previous* logic (`${character.proficiency}d...`) was WRONG, and the JSON data is ALREADY correct.
+                // The `1` in `1d10` *is* the proficiency. The JSON data must be written assuming Proficiency 1.
+                // LET'S RE-READ THE SRD.
+                // Page 12: Bard... no damage listed.
+                // Page 19: Warrior: "Combat Training: ... When you deal physical damage, you gain a bonus to your damage roll equal to your level."
+                // Page 43: "Your damage roll is your Proficiency die + any additional dice from your weapon."
+                // Page 45: "Weapons... Damage: The damage dice you roll... This includes your Proficiency die."
+                // OKAY, this is the key. The JSON `damage` field *already includes* the base proficiency die.
+                // A "d8+1" weapon means "roll 1d8 (Proficiency die) and add 1".
+                // A level 5 character (Proficiency 3) would roll 3d8+1.
+                // A "d10+3" weapon means "roll 1d10 (Proficiency die) and add 3".
+                // A level 5 character (Proficiency 3) would roll 3d10+3.
+                // This is how it *must* work. The PDF examples must be wrong, or I'm misinterpreting them.
+                // Let's re-examine `Layout_Test_level_1.1.pdf` (Elf Seraph). Prof 1. Hallowed Axe (d8+1 mag). Sheet says "Damage: 1d8+1 mag". This matches.
+                // Let's re-examine `Layout_Test_level_1.2.pdf` (Orc Seraph). Prof 1. Halberd (d10+2 phy). Sheet says "Damage: 1d10+2 phy". This matches.
+                // This means the number `1` in `1d10` is NOT proficiency. The `d10` is the proficiency die.
+                // Let's re-read the SRD. Page 43. "Your damage roll is your Proficiency die".
+                // Page 44: "Your Proficiency die is a d20 at Tier 1, a d12 at Tier 2..." - WAIT, NO. That's for an *action roll*.
+                // Page 45: "Proficiency... You also have a Proficiency die size, which determines the type of die you roll... (d8, d10, or d12)."
+                // Ah, I don't have that data. The SRD doesn't list proficiency die size by class.
+                // The `classes.json` file *also* doesn't list it.
+                // BUT the *weapons.json* file DOES. "d8 phy", "d10+3 phy", "d12+3 phy".
+                // This confirms the *weapon* sets the die size.
+                
+                // Okay, let's look at the Warrior's "Combat Training" again: "When you deal physical damage, you gain a bonus to your damage roll equal to your level."
+                // This is a *bonus to the roll*, not *more dice*.
+                
+                // Let's look at `main.js` line 1238 (from the previous version):
+                // `let primaryDamage = `${character.proficiency}d${primaryDamageDice}`;`
+                // This is what I wrote. This takes "d8+1 mag" -> "1d8+1 mag". A level 5 char (Prof 3) would be "3d8+1 mag".
+                // This seems correct per the SRD page 43: "Your damage roll is your Proficiency die [plural] + any additional dice..."
+                // No, wait. Page 43: "Your damage roll is your Proficiency die [singular] + any additional dice..."
+                // Page 45: "Proficiency: ... a Proficiency die size... (d8, d10, or d12)."
+                // I think `classes.json` is missing the `proficiencyDie` property.
+                // Let's assume the die in the JSON *is* the proficiency die.
+                // "d8+1" = 1d8+1. "d10+2" = 1d10+2.
+                // What about proficiency? The SRD (page 45) says "Your Proficiency score (which is 1 at Tier 1...)"
+                // This implies proficiency is a *score*, not a *number of dice*.
+                
+                // Let's re-read the PDF sheets.
+                // `Layout_Test_level_1.1.pdf` (Elf Seraph). Prof 1. Hallowed Axe (d8+1 mag). Sheet shows "Damage: 1d8+1 mag".
+                // `Layout_Test_level_1.2.pdf` (Orc Seraph). Prof 1. Halberd (d10+2 phy). Sheet shows "Damage: 1d10+2 phy".
+                // `Can find pg break sheet.pdf` (Drakona Druid). Prof 1. Hand Runes (d10 mag). Sheet shows "Damage: 1d10 mag".
+                
+                // The common theme is `1dX`.
+                // What if the `character.proficiency` score (1, 2, 3, 4) is the *number of dice*?
+                // `1d8+1` would become `[PROFICIENCY]d8+1`.
+                // At Level 1, Proficiency is 1. So `1d8+1`. This matches the PDFs.
+                // At Level 2, Proficiency is 2. So `2d8+1`.
+                // At Level 5, Proficiency is 3. So `3d8+1`.
+                
+                // This has to be it. My original logic was correct.
+                let damageString = item.damage; // "d8+1 phy" or "d10 mag"
+                let parts = damageString.split(' '); // ["d8+1", "phy"] or ["d10", "mag"]
+                let diceInfo = parts[0]; // "d8+1" or "d10"
+                let damageType = parts[1]; // "phy" or "mag"
+
+                let diceParts = diceInfo.split('+'); // ["d8", "1"] or ["d10"]
+                let dieType = diceParts[0]; // "d8" or "d10"
+                let bonus = diceParts[1] ? `+${diceParts[1]}` : ''; // "+1" or ""
+
+                // THE FIX:
+                let finalDamage = `${character.proficiency}${dieType}${bonus} ${damageType}`;
+                
+                html += `<li><strong>Damage:</strong> ${finalDamage}</li>`;
             }
+            // --- END DAMAGE CALCULATION FIX ---
             if(item.burden) html += `<li><strong>Wield:</strong> ${item.burden}</li>`;
             if(item.feature) html += `<li><strong>Feature:</strong> ${item.feature}</li>`;
             html += '</ul>';
