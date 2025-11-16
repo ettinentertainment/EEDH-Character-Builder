@@ -274,3 +274,72 @@ select:focus, input[type="text"]:focus, textarea:focus {
     grid-column: 1 / -1; /* Make button span both columns */
     margin: 10px 0 0 0;
 }
+
+/* --- PRINT-SPECIFIC STYLES --- */
+@media print {
+    /* Hide all buttons and UI elements */
+    .sheet-header .action-button,
+    .step-nav,
+    .card-management .buttons,
+    #vault-modal-overlay {
+        display: none !important;
+    }
+
+    /* Use white paper, black text */
+    body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+
+    .sheet-page {
+        border: none;
+        box-shadow: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    /* THIS IS THE PAGE BREAK FIX */
+    /* Force the on-screen columns to stack vertically */
+    .page-columns {
+        display: block !important;
+    }
+    .page-columns > div {
+        width: 100%;
+        display: block;
+    }
+
+    /* Force Domain Cards to Page 2 */
+    #character-sheet .sheet-page + .sheet-page {
+        page-break-before: always;
+    }
+    
+    /* Clean up boxes */
+    .sheet-section {
+        border: 1px solid #cccccc;
+        background: #ffffff !important;
+    }
+    .secondary-stat-box,
+    .trait-box {
+        border: 1px solid #cccccc;
+        background: #ffffff !important;
+    }
+    
+    /* Make text readable */
+    h1, h2, h3, h4, 
+    .secondary-stat-box .name, 
+    .trait-box .name,
+    .tracker-label,
+    .equipment-item-display h5,
+    .feature-list-item h4 {
+        color: #000000 !important;
+    }
+    .card p, .card .feature-list, 
+    .equipment-card ul, .summary-list li,
+    .feature-list-item p {
+        color: #333333 !important;
+    }
+    .tracker-box {
+        background-color: #ffffff;
+        border-color: #000000;
+    }
+}
