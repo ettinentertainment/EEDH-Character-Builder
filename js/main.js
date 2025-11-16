@@ -712,19 +712,21 @@ function displayTraitSelection() {
         // If no spellcast trait (e.g., Warrior), find the +2 trait from its parent class
         if (!subclassTrait) {
             let maxVal = -2;
+            let primaryTrait = 'Strength'; // Default
             for (const [trait, value] of Object.entries(character.class.suggested_traits)) {
                 if (value > maxVal) {
                     maxVal = value;
-                    subclassTrait = trait.charAt(0).toUpperCase() + trait.slice(1);
+                    primaryTrait = trait.charAt(0).toUpperCase() + trait.slice(1);
                 }
             }
+            subclassTrait = primaryTrait;
         }
 
         const customTraitHTML = `
             <div style="text-align: center; margin: 20px auto; padding: 15px; background: #222; border: 1px solid #444; border-radius: 8px; max-width: 500px;">
                 <label for="custom-primary-trait" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: block;">Select Your Primary Trait</label>
                 <select id="custom-primary-trait" style="font-size: 1.1em; padding: 8px;">
-                    ${traitOptions.map(t => `<option value="${t}" ${t === subclassTrait ? 'selected' : ''}>${t}</option>`).join('')}
+                    ${traitOptions.map(t => `<option value="${t.toLowerCase()}" ${t === subclassTrait ? 'selected' : ''}>${t}</option>`).join('')}
                 </select>
                 <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">This will be set to +2 when you use "Suggest Traits". We've pre-selected the one from your chosen subclass.</p>
             </div>
@@ -734,7 +736,7 @@ function displayTraitSelection() {
     // --- END CUSTOM CLASS TRAIT SELECTION ---
 
     const suggestedButton = document.createElement('button');
-    suggestedButton.textContent = `Use Suggested Traits for ${character.class.name}`;
+    suggestedButton.textContent = (character.class.name === "Custom Class") ? "Suggest Traits" : `Use Suggested Traits for ${character.class.name}`;
     suggestedButton.className = 'action-button';
     suggestedButton.style.display = 'block';
     suggestedButton.style.margin = '20px auto';
@@ -1517,12 +1519,21 @@ function displayCharacterSheet() {
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
     // --- END V3 STATS ---
 
-    // --- V3: NEW LAYOUT. NO COLUMNS. ---
+    // --- V3: NEW LAYOUT. RE-IMPLEMENTING 2-COLUMN LAYOUT ---
     
-    // 1. TRAIT BANNER (already added)
+    // 1. TRAIT BANNER
     page1.appendChild(coreStatsContainer); 
 
-    // 2. TRACKERS
+    // 2. Create Columns
+    const page1Columns = document.createElement('div');
+    page1Columns.className = 'page-columns';
+
+    // 3. Left Column (Trackers + Features)
+    const leftColumn = document.createElement('div');
+    leftColumn.style.display = 'flex';
+    leftColumn.style.flexDirection = 'column';
+    leftColumn.style.gap = '20px';
+
     const trackers = document.createElement('div');
     trackers.id = 'trackers-condensed';
     const hpSlots = character.class.starting_hp + (character.advancementsTaken['add_hp'] || 0);
@@ -1531,17 +1542,55 @@ function displayCharacterSheet() {
     trackers.appendChild(createTracker('Hope', 6, 'hope'));
     trackers.appendChild(createTracker('Stress', stressSlots, 'stress'));
     trackers.appendChild(createTracker('Armor', armorScore, 'armor', armorScore));
-    page1.appendChild(trackers);
-    
-    // 3. EXPERIENCES
-    const expSection = document.createElement('div');
-    expSection.className = 'sheet-section'; // Add box back for clarity
-    expSection.innerHTML = `<h3>Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
-    page1.appendChild(expSection);
+    leftColumn.appendChild(trackers);
 
-    // 4. EQUIPMENT (with scattered stats)
+    const featuresSection = document.createElement('div');
+    featuresSection.className = 'sheet-section'; // Keep this box as requested
+    
+    // ADDED HOPE FEATURE
+    let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
+    let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
+    if (character.class_feature_multiclass) {
+        classFeaturesHTML += `<hr><h4>${character.class_feature_multiclass.name} (${character.multiclass})</h4>${processFeatureText(character.class_feature_multiclass.description)}`;
+    }
+    let subclassFeaturesHTML = `<h4>${character.subclass.foundation_feature.name} (Subclass)</h4>${processFeatureText(character.subclass.foundation_feature.description)}`;
+    if (character.multiclassFoundationFeature) {
+        subclassFeaturesHTML += `<hr><h4>${character.multiclassFoundationFeature.name} (${character.multiclass} Subclass)</h4>${processFeatureText(character.multiclassFoundationFeature.description)}`;
+    }
+    if (character.specialization_feature) {
+        subclassFeaturesHTML += `<hr><h4>${character.specialization_feature.name} (Specialization)</h4>${processFeatureText(character.specialization_feature.description)}`;
+    }
+    if(character.multiclassSpecializationFeature) {
+        subclassFeaturesHTML += `<hr><h4>${character.multiclassSpecializationFeature.name} (${character.multiclass} Specialization)</h4>${processFeatureText(character.multiclassSpecializationFeature.description)}`;
+    }
+    if (character.mastery_feature) {
+        subclassFeaturesHTML += `<hr><h4>${character.mastery_feature.name} (Mastery)</h4>${processFeatureText(character.mastery_feature.description)}`;
+    }
+    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('');
+    
+    featuresSection.innerHTML = `<h3>Features & Abilities</h3>
+        <div class="feature-list-item">${hopeFeatureHTML}</div>
+        <div class="feature-list-item">${classFeaturesHTML}</div>
+        <div class="feature-list-item">${subclassFeaturesHTML}</div>
+        <div class="feature-list-item">${ancestryFeaturesHTML}</div>
+        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
+    
+    leftColumn.appendChild(featuresSection);
+    page1Columns.appendChild(leftColumn); // Add Left Column to Page
+
+    // 4. Right Column (Experiences + Equipment)
+    const rightColumn = document.createElement('div');
+    rightColumn.style.display = 'flex';
+    rightColumn.style.flexDirection = 'column';
+    rightColumn.style.gap = '20px';
+
+    const expSection = document.createElement('div');
+    // REMOVED 'sheet-section' class
+    expSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
+    rightColumn.appendChild(expSection);
+
     const equipSection = document.createElement('div');
-    equipSection.className = 'sheet-section'; // Add box back for clarity
+    // REMOVED 'sheet-section' class
     
     let scatteredStatsHTML = `<div class="scattered-stats-grid">
         <div class="scattered-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
@@ -1553,7 +1602,7 @@ function displayCharacterSheet() {
     }
     scatteredStatsHTML += `</div>`;
 
-    let equipHTML = `<h3>Equipment</h3>${scatteredStatsHTML}`;
+    let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>${scatteredStatsHTML}`;
     
     if (character.equipment.primary) {
         const createItemHTML = (item) => {
@@ -1590,40 +1639,12 @@ function displayCharacterSheet() {
         equipHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
     }
     equipSection.innerHTML = equipHTML;
-    page1.appendChild(equipSection);
-
-    // 5. FEATURES & ABILITIES
-    const featuresSection = document.createElement('div');
-    featuresSection.className = 'sheet-section'; 
+    rightColumn.appendChild(equipSection);
     
-    let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
-    let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
-    if (character.class_feature_multiclass) {
-        classFeaturesHTML += `<hr><h4>${character.class_feature_multiclass.name} (${character.multiclass})</h4>${processFeatureText(character.class_feature_multiclass.description)}`;
-    }
-    let subclassFeaturesHTML = `<h4>${character.subclass.foundation_feature.name} (Subclass)</h4>${processFeatureText(character.subclass.foundation_feature.description)}`;
-    if (character.multiclassFoundationFeature) {
-        subclassFeaturesHTML += `<hr><h4>${character.multiclassFoundationFeature.name} (${character.multiclass} Subclass)</h4>${processFeatureText(character.multiclassFoundationFeature.description)}`;
-    }
-    if (character.specialization_feature) {
-        subclassFeaturesHTML += `<hr><h4>${character.specialization_feature.name} (Specialization)</h4>${processFeatureText(character.specialization_feature.description)}`;
-    }
-    if(character.multiclassSpecializationFeature) {
-        subclassFeaturesHTML += `<hr><h4>${character.multiclassSpecializationFeature.name} (${character.multiclass} Specialization)</h4>${processFeatureText(character.multiclassSpecializationFeature.description)}`;
-    }
-    if (character.mastery_feature) {
-        subclassFeaturesHTML += `<hr><h4>${character.mastery_feature.name} (Mastery)</h4>${processFeatureText(character.mastery_feature.description)}`;
-    }
-    let ancestryFeaturesHTML = character.ancestry.features.map(f => `<h4>${f.name} (Ancestry)</h4>${processFeatureText(f.description)}`).join('');
+    page1Columns.appendChild(rightColumn); // Add Right Column to Page
     
-    featuresSection.innerHTML = `<h3>Features & Abilities</h3>
-        <div class="feature-list-item">${hopeFeatureHTML}</div>
-        <div class="feature-list-item">${classFeaturesHTML}</div>
-        <div class="feature-list-item">${subclassFeaturesHTML}</div>
-        <div class="feature-list-item">${ancestryFeaturesHTML}</div>
-        <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
-    
-    page1.appendChild(featuresSection);
+    // Add the completed columns to Page 1
+    page1.appendChild(page1Columns);
     
     // --- END V3 LAYOUT ---
 
@@ -2879,7 +2900,7 @@ function printCharacterSheet() {
         vaultPrintPage.innerHTML = vaultHTML;
         sheet.appendChild(vaultPrintPage); // Add the vault page to the sheet
     }
-    // --- END NEW VAULT PAGE LOGIC ---
+    // --- END NEW VAZULT PAGE LOGIC ---
     
     const options = {
         margin:       0.5,
