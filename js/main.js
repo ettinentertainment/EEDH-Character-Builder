@@ -512,7 +512,7 @@ function displayCustomDomainSelection() {
                 starting_evasion: 10, // Base default
                 starting_hp: 6, // Base default
                 class_items: "A unique and personal item",
-                suggested_traits: { "Strength": 0, "Agility": 0, "Finesse": 0, "Instinct": 0, "Presence": 0, "Knowledge": 0 }, // Will be set by subclass
+                suggested_traits: { "strength": 0, "agility": 0, "finesse": 0, "instinct": 0, "presence": 0, "knowledge": 0 }, // Will be set by subclass
                 hope_feature: { name: "Custom Hope", description: "To be determined." }, // Will be set by subclass
                 class_feature: { name: "Custom Feature", description: "To be determined." } // Will be set by subclass
             };
@@ -726,7 +726,7 @@ function displayTraitSelection() {
             <div style="text-align: center; margin: 20px auto; padding: 15px; background: #222; border: 1px solid #444; border-radius: 8px; max-width: 500px;">
                 <label for="custom-primary-trait" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: block;">Select Your Primary Trait</label>
                 <select id="custom-primary-trait" style="font-size: 1.1em; padding: 8px;">
-                    ${traitOptions.map(t => `<option value="${t.toLowerCase()}" ${t === subclassTrait ? 'selected' : ''}>${t}</option>`).join('')}
+                    ${traitOptions.map(t => `<option value="${t.toLowerCase()}" ${t.toLowerCase() === subclassTrait.toLowerCase() ? 'selected' : ''}>${t}</option>`).join('')}
                 </select>
                 <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">This will be set to +2 when you use "Suggest Traits". We've pre-selected the one from your chosen subclass.</p>
             </div>
@@ -817,7 +817,7 @@ function displayTraitSelection() {
 
 function updateTraitDropdowns() {
     const allModifiers = ['+2', '+1', '+1', '+0', '+0', '-1'];
-    const allSelects = document.querySelectorAll('#trait-selection-container select');
+    const allSelects = document.querySelectorAll('.trait-selection-box select'); // <-- FIX: Only target trait selects
     const selectedValues = new Map();
     allSelects.forEach(select => {
         if (select.value) {
@@ -866,7 +866,8 @@ function updateTraitDropdowns() {
 function selectTraits() {
     const assignments = {};
     let allAssigned = true;
-    document.querySelectorAll('#trait-selection-container select').forEach(select => {
+    // --- FIX: Query only the 6 trait selects ---
+    document.querySelectorAll('.trait-selection-box select').forEach(select => {
         const traitName = select.dataset.trait;
         const value = select.value;
         if (value) {
@@ -1486,6 +1487,7 @@ function displayCharacterSheet() {
         traitBanner.appendChild(traitItem);
     });
     coreStatsContainer.appendChild(traitBanner);
+    page1.appendChild(coreStatsContainer); // Add Trait Banner
     
     // --- V3: CALCULATE STATS ---
     const chosenProficiencyBonus = character.advancementsTaken['increase_proficiency'] || 0;
@@ -1519,16 +1521,14 @@ function displayCharacterSheet() {
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
     // --- END V3 STATS ---
 
-    // --- V3: NEW LAYOUT. RE-IMPLEMENTING 2-COLUMN LAYOUT ---
     
-    // 1. TRAIT BANNER
-    page1.appendChild(coreStatsContainer); 
-
-    // 2. Create Columns
+    // --- V4: RE-IMPLEMENTING 2-COLUMN LAYOUT (Based on image_82faa9.png) ---
+    
+    // 1. Create Columns
     const page1Columns = document.createElement('div');
     page1Columns.className = 'page-columns';
 
-    // 3. Left Column (Trackers + Features)
+    // 2. Left Column (Trackers + Features)
     const leftColumn = document.createElement('div');
     leftColumn.style.display = 'flex';
     leftColumn.style.flexDirection = 'column';
@@ -1547,7 +1547,6 @@ function displayCharacterSheet() {
     const featuresSection = document.createElement('div');
     featuresSection.className = 'sheet-section'; // Keep this box as requested
     
-    // ADDED HOPE FEATURE
     let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
     let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
     if (character.class_feature_multiclass) {
@@ -1578,31 +1577,37 @@ function displayCharacterSheet() {
     leftColumn.appendChild(featuresSection);
     page1Columns.appendChild(leftColumn); // Add Left Column to Page
 
-    // 4. Right Column (Experiences + Equipment)
+    // 3. Right Column (Secondary Stats + Experiences + Equipment)
     const rightColumn = document.createElement('div');
     rightColumn.style.display = 'flex';
     rightColumn.style.flexDirection = 'column';
     rightColumn.style.gap = '20px';
 
+    // Add Secondary Stats Bar
+    const secondaryStatsBar = document.createElement('div');
+    secondaryStatsBar.className = 'secondary-stats-bar';
+    let secondaryStatsHTML = '';
+    if (character.subclass.spellcast_trait) {
+        secondaryStatsHTML += `<div class="secondary-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
+    }
+    secondaryStatsHTML += `
+        <div class="secondary-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
+        <div class="secondary-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
+        <div class="secondary-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
+    `;
+    secondaryStatsBar.innerHTML = secondaryStatsHTML;
+    rightColumn.appendChild(secondaryStatsBar);
+
+    // Add Experiences
     const expSection = document.createElement('div');
     // REMOVED 'sheet-section' class
     expSection.innerHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
     rightColumn.appendChild(expSection);
 
+    // Add Equipment
     const equipSection = document.createElement('div');
     // REMOVED 'sheet-section' class
-    
-    let scatteredStatsHTML = `<div class="scattered-stats-grid">
-        <div class="scattered-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
-        <div class="scattered-stat-box"><div class="name">Thresholds</div><div class="value">${character.majorThreshold}/${character.severeThreshold}</div></div>
-        <div class="scattered-stat-box"><div class="name">Proficiency</div><div class="value">${character.proficiency}</div></div>
-    `;
-    if (character.subclass.spellcast_trait) {
-        scatteredStatsHTML += `<div class="scattered-stat-box"><div class="name">Spellcast Trait</div><div class="value">${character.subclass.spellcast_trait}</div></div>`;
-    }
-    scatteredStatsHTML += `</div>`;
-
-    let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>${scatteredStatsHTML}`;
+    let equipHTML = `<h3 style="font-size: 1.3em; color: #9d78c9; border-bottom: 1px solid #444; padding-bottom: 10px; margin-top: 0;">Equipment</h3>`;
     
     if (character.equipment.primary) {
         const createItemHTML = (item) => {
@@ -1646,7 +1651,7 @@ function displayCharacterSheet() {
     // Add the completed columns to Page 1
     page1.appendChild(page1Columns);
     
-    // --- END V3 LAYOUT ---
+    // --- END V4 LAYOUT ---
 
     sheet.appendChild(page1);
 
@@ -2900,7 +2905,7 @@ function printCharacterSheet() {
         vaultPrintPage.innerHTML = vaultHTML;
         sheet.appendChild(vaultPrintPage); // Add the vault page to the sheet
     }
-    // --- END NEW VAZULT PAGE LOGIC ---
+    // --- END NEW VAULT PAGE LOGIC ---
     
     const options = {
         margin:       0.5,
