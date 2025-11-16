@@ -345,6 +345,15 @@ function displayClassSelection() {
         cardsContainer.appendChild(card);
     });
 
+    // --- CUSTOM CLASS CARD ---
+    const customCard = document.createElement('div');
+    customCard.className = 'card';
+    customCard.innerHTML = `<h3>Custom Class</h3><p>Create a custom class by mixing and matching any domains and subclasses.</p>`;
+    customCard.addEventListener('click', displayCustomDomainSelection);
+    cardsContainer.appendChild(customCard);
+    // --- END CUSTOM CLASS CARD ---
+
+
     document.getElementById('generate-preview-btn').addEventListener('click', () => {
         const level = parseInt(document.getElementById('generator-level-select').value, 10);
         const className = document.getElementById('generator-class-select').value;
@@ -457,6 +466,142 @@ function displayDomainSetSelection() {
     });
 }
 
+// --- CUSTOM CLASS FUNCTIONS ---
+
+function displayCustomDomainSelection() {
+    const creatorContainer = getCreatorContainer();
+    const domainSetSelectionStep = document.createElement('div');
+    domainSetSelectionStep.id = 'domain-set-selection';
+    
+    const allDomains = [...new Set(gameData.domainCards.map(card => card.domain))].sort();
+
+    let domainCardsHTML = allDomains.map(domain => {
+        return `
+            <div class="card" data-domain-name="${domain}">
+                <h3>${domain}</h3>
+            </div>
+        `;
+    }).join('');
+
+    domainSetSelectionStep.innerHTML = `
+        <h2>Custom Class (1/3): Choose Any 2 Domains</h2>
+        <div class="step-nav">
+            <button class="back-btn" id="domain-set-back-btn">← Back to Class</button>
+            <button class="action-button" id="domain-set-next-btn" style="margin-left: auto;" disabled>Confirm Domains →</button>
+        </div>
+        <p>Select any two domains for your custom class.</p>
+        <p>Selected: <span id="selected-domain-count">0</span> / 2</p>
+        <div class="cards-container" id="domain-set-cards">${domainCardsHTML}</div>
+    `;
+
+    creatorContainer.appendChild(domainSetSelectionStep);
+
+    document.getElementById('domain-set-back-btn').addEventListener('click', () => {
+        delete character.class;
+        displayClassSelection();
+    });
+
+    document.getElementById('domain-set-next-btn').addEventListener('click', () => {
+        const selectedDomains = Array.from(document.querySelectorAll('#domain-set-cards .card.selected')).map(c => c.dataset.domainName);
+        if (selectedDomains.length === 2) {
+            // Create a temporary class object
+            character.class = {
+                name: "Custom Class",
+                description: "A custom-built class.",
+                domains: selectedDomains,
+                starting_evasion: 10, // Base default
+                starting_hp: 6, // Base default
+                class_items: "A unique and personal item",
+                suggested_traits: { "Strength": 0, "Agility": 0, "Finesse": 0, "Instinct": 0, "Presence": 0, "Knowledge": 0 }, // Will be set by subclass
+                hope_feature: { name: "Custom Hope", description: "To be determined." }, // Will be set by subclass
+                class_feature: { name: "Custom Feature", description: "To be determined." } // Will be set by subclass
+            };
+            displayCustomSubclassSelection();
+        } else {
+            alert('You must select exactly two domains.');
+        }
+    });
+
+    document.querySelectorAll('#domain-set-cards .card').forEach(card => {
+        card.addEventListener('click', () => {
+            const selectedCount = document.querySelectorAll('#domain-set-cards .card.selected').length;
+            if (card.classList.contains('selected')) {
+                card.classList.remove('selected');
+            } else if (selectedCount < 2) {
+                card.classList.add('selected');
+            }
+            
+            const newSelectedCount = document.querySelectorAll('#domain-set-cards .card.selected').length;
+            document.getElementById('selected-domain-count').textContent = newSelectedCount;
+            document.getElementById('domain-set-next-btn').disabled = newSelectedCount !== 2;
+        });
+    });
+}
+
+function displayCustomSubclassSelection() {
+    const creatorContainer = getCreatorContainer();
+    const subclassSelectionStep = document.createElement('div');
+    subclassSelectionStep.id = 'subclass-selection';
+    subclassSelectionStep.innerHTML = `<h2>Custom Class (2/3): Choose Any Subclass</h2>`;
+    
+    const navContainer = document.createElement('div');
+    navContainer.className = 'step-nav';
+    const backButton = document.createElement('button');
+    backButton.className = 'back-btn';
+    backButton.textContent = '← Back to Domains';
+    backButton.addEventListener('click', () => { 
+        delete character.class;
+        displayCustomDomainSelection(); 
+    });
+    navContainer.appendChild(backButton);
+    subclassSelectionStep.appendChild(navContainer);
+
+    const cardsContainer = document.createElement('div');
+    cardsContainer.className = 'cards-container';
+    
+    const allSubclasses = gameData.classes.flatMap(c => 
+        c.subclasses.map(sc => ({
+            ...sc, 
+            parentClassName: c.name,
+            parentClassHope: c.hope_feature,
+            parentClassFeature: c.class_feature,
+            parentClassHP: c.starting_hp,
+            parentClassEvasion: c.starting_evasion,
+            parentClassTraits: c.suggested_traits
+        }))
+    );
+    
+    allSubclasses.forEach(subclassData => {
+        const card = document.createElement('div');
+        card.className = 'card';
+        card.addEventListener('click', () => selectCustomSubclass(subclassData));
+        let cardContent = `<h3>${subclassData.name} <span style="font-size: 0.7em; color: #ccc;">(${subclassData.parentClassName})</span></h3>${formatDescription(subclassData.description)}`;
+        cardContent += `<hr><h4>Foundation Feature: ${subclassData.foundation_feature.name}</h4>`;
+        cardContent += formatDescription(subclassData.foundation_feature.description);
+        card.innerHTML = cardContent;
+        cardsContainer.appendChild(card);
+    });
+    
+    subclassSelectionStep.appendChild(cardsContainer);
+    creatorContainer.appendChild(subclassSelectionStep);
+}
+
+function selectCustomSubclass(subclassData) {
+    character.subclass = subclassData;
+    
+    // Copy the parent class's core data to our custom class
+    character.class.suggested_traits = subclassData.parentClassTraits;
+    character.class.hope_feature = subclassData.parentClassHope;
+    character.class.class_feature = subclassData.parentClassFeature;
+    character.class.starting_hp = subclassData.parentClassHP;
+    character.class.starting_evasion = subclassData.parentClassEvasion;
+    
+    displayAncestrySelection();
+}
+
+// --- END CUSTOM CLASS FUNCTIONS ---
+
+
 function displayAncestrySelection() {
     const creatorContainer = getCreatorContainer();
     const ancestrySelectionStep = document.createElement('div');
@@ -467,7 +612,14 @@ function displayAncestrySelection() {
     const backButton = document.createElement('button');
     backButton.className = 'back-btn';
     backButton.textContent = '← Back to Subclass';
-    backButton.addEventListener('click', () => { delete character.subclass; displaySubclassSelection(); });
+    backButton.addEventListener('click', () => { 
+        delete character.subclass; 
+        if (character.class.name === "Custom Class") {
+            displayCustomSubclassSelection();
+        } else {
+            displaySubclassSelection(); 
+        }
+    });
     navContainer.appendChild(backButton);
     ancestrySelectionStep.appendChild(navContainer);
     const cardsContainer = document.createElement('div');
@@ -552,18 +704,73 @@ function displayTraitSelection() {
         traitContainer.innerHTML += `<p style="text-align: center; font-style: italic; font-size: 1.1em;">Your Spellcast Trait for ${character.subclass.name} is <strong>${character.subclass.spellcast_trait}</strong>.</p>`;
     }
 
+    // --- CUSTOM CLASS TRAIT SELECTION ---
+    if (character.class.name === "Custom Class") {
+        let traitOptions = ['Strength', 'Agility', 'Finesse', 'Instinct', 'Presence', 'Knowledge'];
+        let subclassTrait = character.subclass.spellcast_trait;
+        
+        // If no spellcast trait (e.g., Warrior), find the +2 trait from its parent class
+        if (!subclassTrait) {
+            let maxVal = -2;
+            for (const [trait, value] of Object.entries(character.class.suggested_traits)) {
+                if (value > maxVal) {
+                    maxVal = value;
+                    subclassTrait = trait.charAt(0).toUpperCase() + trait.slice(1);
+                }
+            }
+        }
+
+        const customTraitHTML = `
+            <div style="text-align: center; margin: 20px auto; padding: 15px; background: #222; border: 1px solid #444; border-radius: 8px; max-width: 500px;">
+                <label for="custom-primary-trait" style="font-weight: bold; font-size: 1.1em; margin-bottom: 10px; display: block;">Select Your Primary Trait</label>
+                <select id="custom-primary-trait" style="font-size: 1.1em; padding: 8px;">
+                    ${traitOptions.map(t => `<option value="${t}" ${t === subclassTrait ? 'selected' : ''}>${t}</option>`).join('')}
+                </select>
+                <p style="font-size: 0.9em; color: #ccc; margin-top: 10px;">This will be set to +2 when you use "Suggest Traits". We've pre-selected the one from your chosen subclass.</p>
+            </div>
+        `;
+        traitContainer.innerHTML += customTraitHTML;
+    }
+    // --- END CUSTOM CLASS TRAIT SELECTION ---
+
     const suggestedButton = document.createElement('button');
     suggestedButton.textContent = `Use Suggested Traits for ${character.class.name}`;
     suggestedButton.className = 'action-button';
     suggestedButton.style.display = 'block';
     suggestedButton.style.margin = '20px auto';
     suggestedButton.addEventListener('click', () => {
-        const suggested = character.class.suggested_traits;
-        for (const traitName in suggested) {
-            const select = document.getElementById(`trait-${traitName.toLowerCase()}`);
-            if (select) {
-                const value = suggested[traitName] >= 0 ? `+${suggested[traitName]}` : `${suggested[traitName]}`;
-                select.value = value;
+        const allSelects = {};
+        document.querySelectorAll('.trait-selection-box select').forEach(s => {
+            allSelects[s.dataset.trait] = s;
+        });
+
+        if (character.class.name === "Custom Class") {
+            // Custom Class Logic
+            const primaryTrait = document.getElementById('custom-primary-trait').value.toLowerCase();
+            let remainingModifiers = ['+1', '+1', '+0', '+0', '-1'];
+            
+            // Shuffle modifiers
+            for (let i = remainingModifiers.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [remainingModifiers[i], remainingModifiers[j]] = [remainingModifiers[j], remainingModifiers[i]];
+            }
+
+            for (const traitName in allSelects) {
+                if (traitName === primaryTrait) {
+                    allSelects[traitName].value = '+2';
+                } else {
+                    allSelects[traitName].value = remainingModifiers.pop();
+                }
+            }
+        } else {
+            // Original Logic
+            const suggested = character.class.suggested_traits;
+            for (const traitName in suggested) {
+                const select = allSelects[traitName.toLowerCase()];
+                if (select) {
+                    const value = suggested[traitName] >= 0 ? `+${suggested[traitName]}` : `${suggested[traitName]}`;
+                    select.value = value;
+                }
             }
         }
         updateTraitDropdowns();
@@ -1199,76 +1406,13 @@ function displayCharacterSheet() {
     sheetContainer.innerHTML = '';
     sheetContainer.classList.remove('hidden');
 
-    // --- NEW LAYOUT PATCH V2 ---
-    // Inject CSS for the new 2-column + full-width layout
-    const injectedCSS = document.createElement('style');
-    injectedCSS.innerHTML = `
-        .sheet-dashboard-row {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: nowrap;
-            gap: 20px;
-            width: 100%;
-            margin-bottom: 20px;
-            page-break-inside: avoid; /* Try to keep this row together */
-        }
-        #dashboard-left {
-            flex: 1;
-            min-width: 200px; /* Tracker width */
-        }
-        #dashboard-right {
-            flex: 2; /* Experiences width */
-        }
-        #dashboard-left #trackers-condensed {
-            grid-template-columns: 1fr; /* Stack trackers vertically */
-            gap: 10px;
-        }
-        #equipment-section-full {
-            margin-bottom: 20px;
-            page-break-inside: avoid; /* Try to keep equipment block together */
-        }
-        /* Make the headers consistent without the sheet-section box */
-        #dashboard-right h3, #equipment-section-full h3 {
-            font-size: 1.5em;
-            color: #ccc;
-            border-bottom: 2px solid #555;
-            padding-bottom: 8px;
-            margin-bottom: 15px;
-        }
-        .scattered-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 10px;
-            background-color: #2a2a2e;
-            padding: 10px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .scattered-stat-box {
-            font-size: 0.9em;
-        }
-        .scattered-stat-box .name {
-            font-weight: bold;
-            color: #9d78c9;
-            text-transform: uppercase;
-            font-size: 0.8em;
-            letter-spacing: 0.5px;
-        }
-        .scattered-stat-box .value {
-            font-size: 1.4em;
-            font-weight: bold;
-            color: #fff;
-        }
-    `;
-    // --- END NEW LAYOUT PATCH V2 ---
+    // --- REMOVED ALL INJECTED CSS ---
 
     const sheet = document.createElement('div');
     sheet.id = 'character-sheet';
 
     const page1 = document.createElement('div');
     page1.className = 'sheet-page';
-    page1.appendChild(injectedCSS); // Add our new layout rules
 
     const header = document.createElement('div');
     header.className = 'sheet-header';
@@ -1340,9 +1484,8 @@ function displayCharacterSheet() {
         traitBanner.appendChild(traitItem);
     });
     coreStatsContainer.appendChild(traitBanner);
-    page1.appendChild(coreStatsContainer); // Add Trait Banner
     
-    // --- CALCULATE ALL STATS ---
+    // --- V3: CALCULATE STATS ---
     const chosenProficiencyBonus = character.advancementsTaken['increase_proficiency'] || 0;
     character.proficiency = getBaseProficiency(character.level) + chosenProficiencyBonus;
     character.evasion = character.class.starting_evasion + (character.advancementsTaken['increase_evasion'] || 0) + evasionModifier;
@@ -1372,15 +1515,14 @@ function displayCharacterSheet() {
     const thresholdBonus = character.thresholdBonus || 0;
     character.majorThreshold = baseThresholds[0] + thresholdBonus;
     character.severeThreshold = baseThresholds[1] + thresholdBonus;
+    // --- END V3 STATS ---
 
+    // --- V3: NEW LAYOUT. NO COLUMNS. ---
+    
+    // 1. TRAIT BANNER (already added)
+    page1.appendChild(coreStatsContainer); 
 
-    // --- NEW LAYOUT: Dashboard Row (Trackers + Experiences) ---
-    const dashboardRow = document.createElement('div');
-    dashboardRow.className = 'sheet-dashboard-row';
-
-    // --- Dashboard Left: Trackers ---
-    const dashboardLeft = document.createElement('div');
-    dashboardLeft.id = 'dashboard-left';
+    // 2. TRACKERS
     const trackers = document.createElement('div');
     trackers.id = 'trackers-condensed';
     const hpSlots = character.class.starting_hp + (character.advancementsTaken['add_hp'] || 0);
@@ -1389,24 +1531,17 @@ function displayCharacterSheet() {
     trackers.appendChild(createTracker('Hope', 6, 'hope'));
     trackers.appendChild(createTracker('Stress', stressSlots, 'stress'));
     trackers.appendChild(createTracker('Armor', armorScore, 'armor', armorScore));
-    dashboardLeft.appendChild(trackers);
-    dashboardRow.appendChild(dashboardLeft);
-
-    // --- Dashboard Right: Experiences ---
-    const dashboardRight = document.createElement('div');
-    dashboardRight.id = 'dashboard-right';
-    const expSection = document.createElement('div');
-    // expSection.className = 'sheet-section'; // <-- REMOVED
-    expSection.innerHTML = `<h3>Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
-    dashboardRight.appendChild(expSection);
-    dashboardRow.appendChild(dashboardRight);
+    page1.appendChild(trackers);
     
-    page1.appendChild(dashboardRow); // Add the Dashboard row to Page 1
+    // 3. EXPERIENCES
+    const expSection = document.createElement('div');
+    expSection.className = 'sheet-section'; // Add box back for clarity
+    expSection.innerHTML = `<h3>Experiences</h3><ul class="summary-list">${character.experiences.map(e => `<li><strong>${e.name} (+${e.modifier}):</strong> ${e.description || 'No description.'}</li>`).join('')}</ul>`;
+    page1.appendChild(expSection);
 
-    // --- NEW LAYOUT: Full-Width Equipment Section ---
+    // 4. EQUIPMENT (with scattered stats)
     const equipSection = document.createElement('div');
-    equipSection.id = 'equipment-section-full';
-    // equipSection.className = 'sheet-section'; // <-- REMOVED
+    equipSection.className = 'sheet-section'; // Add box back for clarity
     
     let scatteredStatsHTML = `<div class="scattered-stats-grid">
         <div class="scattered-stat-box"><div class="name">Evasion</div><div class="value">${character.evasion}</div></div>
@@ -1455,13 +1590,12 @@ function displayCharacterSheet() {
         equipHTML += `<p>No equipment selected. You can select equipment via the 'Change Equipment' button.</p>`;
     }
     equipSection.innerHTML = equipHTML;
-    page1.appendChild(equipSection); // Add Equipment section full-width
+    page1.appendChild(equipSection);
 
-    // --- NEW LAYOUT: Full-Width Features Section ---
+    // 5. FEATURES & ABILITIES
     const featuresSection = document.createElement('div');
-    featuresSection.className = 'sheet-section'; // Keep the box style for this one
+    featuresSection.className = 'sheet-section'; 
     
-    // ADDED HOPE FEATURE
     let hopeFeatureHTML = `<h4>${character.class.hope_feature.name} (Hope)</h4>${processFeatureText(character.class.hope_feature.description)}`;
     let classFeaturesHTML = `<h4>${character.class.class_feature.name} (Class)</h4>${processFeatureText(character.class.class_feature.description)}`;
     if (character.class_feature_multiclass) {
@@ -1489,14 +1623,9 @@ function displayCharacterSheet() {
         <div class="feature-list-item">${ancestryFeaturesHTML}</div>
         <div class="feature-list-item"><h4>${character.community.feature.name} (Community)</h4><p>${character.community.feature.description}</p></div>`;
     
-    page1.appendChild(featuresSection); // Appended directly to page1, so it's full-width
+    page1.appendChild(featuresSection);
     
-    // --- ADD THE RED LINE DIAGNOSTIC ---
-    const pageBreakLine = document.createElement('hr');
-    pageBreakLine.style = "border-color: red; border-width: 3px; margin: 20px 0; width: 100%;";
-    pageBreakLine.title = "Visual Page Break Guide";
-    page1.appendChild(pageBreakLine);
-    // --- END RED LINE ---
+    // --- END V3 LAYOUT ---
 
     sheet.appendChild(page1);
 
